@@ -13,8 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAppointments } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -41,7 +41,6 @@ const TIME_SLOTS = [
 ];
 
 export default function Booking() {
-  const { addAppointment } = useAppointments();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [step, setStep] = useState(1);
@@ -61,27 +60,52 @@ export default function Booking() {
     },
   });
 
+  const createAppointmentMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof formSchema>) => {
+      const response = await fetch('/api/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: data.name,
+          customerEmail: data.email,
+          customerPhone: data.phone,
+          vehicle: `${data.vehicleYear} ${data.vehicleMake} ${data.vehicleModel}`,
+          serviceType: data.serviceType,
+          date: format(data.date, 'yyyy-MM-dd'),
+          time: data.timeSlot,
+          address: data.address,
+          status: 'scheduled',
+          mechanicId: null,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create appointment');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Appointment Confirmed!",
+        description: "We've sent a confirmation to your email.",
+      });
+      setTimeout(() => setLocation("/"), 2000);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create appointment. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   function onSubmit(values: z.infer<typeof formSchema>) {
-    addAppointment({
-      customerName: values.name,
-      vehicle: `${values.vehicleYear} ${values.vehicleMake} ${values.vehicleModel}`,
-      serviceType: values.serviceType,
-      date: format(values.date, 'yyyy-MM-dd'),
-      time: values.timeSlot,
-      address: values.address,
-    });
-
-    toast({
-      title: "Appointment Confirmed!",
-      description: "We've sent a confirmation to your email.",
-    });
-
-    // Simulate redirect to success or home
-    setTimeout(() => setLocation("/"), 2000);
+    createAppointmentMutation.mutate(values);
   }
 
   const nextStep = async () => {
-    // Validate current step fields before moving
     let fieldsToValidate: any[] = [];
     if (step === 1) fieldsToValidate = ['vehicleYear', 'vehicleMake', 'vehicleModel', 'serviceType'];
     if (step === 2) fieldsToValidate = ['date', 'timeSlot', 'address'];
@@ -133,7 +157,7 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Year</FormLabel>
                             <FormControl>
-                              <Input placeholder="2020" {...field} />
+                              <Input placeholder="2020" {...field} data-testid="input-year" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -146,7 +170,7 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Make</FormLabel>
                             <FormControl>
-                              <Input placeholder="Toyota" {...field} />
+                              <Input placeholder="Toyota" {...field} data-testid="input-make" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -159,7 +183,7 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Model</FormLabel>
                             <FormControl>
-                              <Input placeholder="Camry" {...field} />
+                              <Input placeholder="Camry" {...field} data-testid="input-model" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -179,6 +203,7 @@ export default function Booking() {
                                 key={service.id}
                                 className={`cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-primary/50 ${field.value === service.name ? 'border-primary bg-primary/5' : 'border-muted'}`}
                                 onClick={() => field.onChange(service.name)}
+                                data-testid={`service-${service.id}`}
                               >
                                 <div className="font-bold">{service.name}</div>
                                 <div className="text-2xl font-display font-bold text-primary mt-2">{service.price}</div>
@@ -208,6 +233,7 @@ export default function Booking() {
                                   <Button
                                     variant={"outline"}
                                     className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
+                                    data-testid="button-date"
                                   >
                                     {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
@@ -239,7 +265,7 @@ export default function Booking() {
                             <FormLabel>Preferred Time</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger data-testid="select-time">
                                   <SelectValue placeholder="Select a time" />
                                 </SelectTrigger>
                               </FormControl>
@@ -264,7 +290,7 @@ export default function Booking() {
                           <FormControl>
                             <div className="relative">
                               <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Input className="pl-9" placeholder="1234 Main St, City, State" {...field} />
+                              <Input className="pl-9" placeholder="1234 Main St, City, State" {...field} data-testid="input-address" />
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -284,7 +310,7 @@ export default function Booking() {
                         <FormItem>
                           <FormLabel>Full Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="John Doe" {...field} />
+                            <Input placeholder="John Doe" {...field} data-testid="input-name" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -298,7 +324,7 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                              <Input placeholder="john@example.com" {...field} />
+                              <Input placeholder="john@example.com" {...field} data-testid="input-customer-email" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -311,7 +337,7 @@ export default function Booking() {
                           <FormItem>
                             <FormLabel>Phone Number</FormLabel>
                             <FormControl>
-                              <Input placeholder="(555) 123-4567" {...field} />
+                              <Input placeholder="(555) 123-4567" {...field} data-testid="input-phone" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -340,9 +366,16 @@ export default function Booking() {
                   )}
                   
                   {step < 3 ? (
-                    <Button type="button" onClick={nextStep} className="bg-primary text-primary-foreground hover:bg-primary/90">Next Step</Button>
+                    <Button type="button" onClick={nextStep} className="bg-primary text-primary-foreground hover:bg-primary/90" data-testid="button-next">Next Step</Button>
                   ) : (
-                    <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold px-8">Confirm Booking</Button>
+                    <Button 
+                      type="submit" 
+                      className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold px-8"
+                      disabled={createAppointmentMutation.isPending}
+                      data-testid="button-confirm"
+                    >
+                      {createAppointmentMutation.isPending ? "Booking..." : "Confirm Booking"}
+                    </Button>
                   )}
                 </div>
               </form>
