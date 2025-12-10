@@ -25,9 +25,15 @@ function MechanicLogin({ onLogin }: { onLogin: () => void }) {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email && password) {
+    if (email === "truman@oilboys.com" && password === "admin") {
       onLogin();
-      toast({ title: "Welcome back, Mike!" });
+      toast({ title: "Welcome back, Truman!" });
+    } else {
+      toast({ 
+        title: "Invalid Credentials", 
+        description: "Please check your email and password.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -44,7 +50,7 @@ function MechanicLogin({ onLogin }: { onLogin: () => void }) {
               <label className="text-sm font-medium">Email ID</label>
               <Input 
                 type="email" 
-                placeholder="mechanic@oilboys.com"
+                placeholder="truman@oilboys.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -66,7 +72,7 @@ function MechanicLogin({ onLogin }: { onLogin: () => void }) {
           </form>
         </CardContent>
         <CardFooter className="justify-center">
-          <p className="text-xs text-muted-foreground">For demo: use any email/password</p>
+          <p className="text-xs text-muted-foreground">Demo Creds: truman@oilboys.com / admin</p>
         </CardFooter>
       </Card>
     </div>
@@ -88,7 +94,7 @@ function MechanicDashboard() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold">Good Morning, Mike</h1>
+          <h1 className="text-3xl font-display font-bold">Good Morning, Truman</h1>
           <p className="text-muted-foreground">You have {pending.length} scheduled jobs today.</p>
         </div>
         <div className="flex gap-2">
