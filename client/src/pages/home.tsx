@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Clock, Shield, Star } from "lucide-react";
 import { Link } from "wouter";
-import heroImage from "@assets/generated_images/two_friendly_mechanics_in_matching_uniform_standing_next_to_a_service_van.png";
+import heroImage from "@assets/generated_images/cinematic_shot_of_a_modern_car_grille_and_headlights_with_mountains_reflection.png";
 import { motion } from "framer-motion";
 
 export default function Home() {
