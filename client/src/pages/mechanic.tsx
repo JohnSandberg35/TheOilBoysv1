@@ -44,7 +44,7 @@ function MechanicLogin({ onLogin }: { onLogin: () => void }) {
               <label className="text-sm font-medium">Email ID</label>
               <Input 
                 type="email" 
-                placeholder="mechanic@turbolube.com"
+                placeholder="mechanic@oilboys.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

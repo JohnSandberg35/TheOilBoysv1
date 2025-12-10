@@ -20,7 +20,7 @@ const MOCK_APPOINTMENTS: Appointment[] = [
     serviceType: 'Synthetic Oil Change',
     date: '2025-12-15',
     time: '09:00',
-    address: '123 Maple Ave, Springfield',
+    address: '123 State St, Orem, UT',
     status: 'scheduled',
     mechanicId: 'mech1'
   },
@@ -31,7 +31,7 @@ const MOCK_APPOINTMENTS: Appointment[] = [
     serviceType: 'Standard Oil Change',
     date: '2025-12-15',
     time: '11:00',
-    address: '456 Oak Ln, Springfield',
+    address: '456 Center St, Provo, UT',
     status: 'in-progress',
     mechanicId: 'mech1'
   },
@@ -42,7 +42,7 @@ const MOCK_APPOINTMENTS: Appointment[] = [
     serviceType: 'High Mileage Oil Change',
     date: '2025-12-16',
     time: '14:00',
-    address: '789 Pine St, Springfield',
+    address: '789 Main St, Lehi, UT',
     status: 'scheduled',
     mechanicId: 'mech1'
   }
@@ -53,12 +53,12 @@ export function useAppointments() {
 
   useEffect(() => {
     // Load from local storage or fallback to mock
-    const stored = localStorage.getItem('turbolube_appointments');
+    const stored = localStorage.getItem('oilboys_appointments');
     if (stored) {
       setAppointments(JSON.parse(stored));
     } else {
       setAppointments(MOCK_APPOINTMENTS);
-      localStorage.setItem('turbolube_appointments', JSON.stringify(MOCK_APPOINTMENTS));
+      localStorage.setItem('oilboys_appointments', JSON.stringify(MOCK_APPOINTMENTS));
     }
   }, []);
 
@@ -71,13 +71,13 @@ export function useAppointments() {
     };
     const updated = [...appointments, newAppt];
     setAppointments(updated);
-    localStorage.setItem('turbolube_appointments', JSON.stringify(updated));
+    localStorage.setItem('oilboys_appointments', JSON.stringify(updated));
   };
 
   const updateStatus = (id: string, status: Appointment['status']) => {
     const updated = appointments.map(a => a.id === id ? { ...a, status } : a);
     setAppointments(updated);
-    localStorage.setItem('turbolube_appointments', JSON.stringify(updated));
+    localStorage.setItem('oilboys_appointments', JSON.stringify(updated));
   };
 
   return { appointments, addAppointment, updateStatus };

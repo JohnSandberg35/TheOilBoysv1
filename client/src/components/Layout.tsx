@@ -3,7 +3,7 @@ import { Wrench, Calendar, User, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import logoImage from "@assets/generated_images/minimalist_oil_drop_and_gear_logo_symbol.png";
+import logoImage from "@assets/generated_images/modern_clean_typography_logo_for_the_oil_boys.png";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -34,10 +34,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer">
-              <img src={logoImage} alt="TurboLube Logo" className="w-8 h-8 object-contain" />
-              <span className="font-display text-2xl font-bold tracking-tighter text-secondary">
-                TURBO<span className="text-primary">LUBE</span>
-              </span>
+              <img src={logoImage} alt="The Oil Boys Logo" className="h-10 w-auto object-contain" />
             </div>
           </Link>
 
@@ -77,7 +74,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <span className="font-display text-2xl font-bold tracking-tighter text-white">
-                TURBO<span className="text-primary">LUBE</span>
+                THE OIL<span className="text-primary"> BOYS</span>
               </span>
             </div>
             <p className="text-gray-400 text-sm">
@@ -86,13 +83,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <div>
             <h4 className="font-display text-lg mb-4 text-white">Contact</h4>
-            <p className="text-gray-400 text-sm">1-800-TURBO-LUBE</p>
-            <p className="text-gray-400 text-sm">service@turbolube.com</p>
+            <p className="text-gray-400 text-sm">801-555-OILS</p>
+            <p className="text-gray-400 text-sm">service@oilboys.com</p>
           </div>
           <div>
             <h4 className="font-display text-lg mb-4 text-white">Service Areas</h4>
-            <p className="text-gray-400 text-sm">Greater Metro Area</p>
-            <p className="text-gray-400 text-sm">Suburbs & Surrounds</p>
+            <p className="text-gray-400 text-sm">Utah County</p>
+            <p className="text-gray-400 text-sm">Orem, Provo, Lehi & Surrounds</p>
           </div>
         </div>
       </footer>

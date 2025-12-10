@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Clock, Shield, Star } from "lucide-react";
 import { Link } from "wouter";
-import heroImage from "@assets/generated_images/professional_mobile_mechanic_working_on_a_car_in_a_clean_driveway.png";
+import heroImage from "@assets/generated_images/two_friendly_mechanics_in_matching_uniform_standing_next_to_a_service_van.png";
 import { motion } from "framer-motion";
 
 export default function Home() {
@@ -27,11 +27,11 @@ export default function Home() {
             className="max-w-2xl text-white"
           >
             <div className="inline-block bg-primary text-primary-foreground px-3 py-1 text-sm font-bold uppercase tracking-wider mb-4 rounded-sm">
-              We Come To You
+              Serving Utah County
             </div>
             <h1 className="text-5xl md:text-7xl font-display font-bold mb-6 leading-none">
-              OIL CHANGES <br />
-              <span className="text-primary">AT YOUR DOORSTEP</span>
+              THE OIL BOYS <br />
+              <span className="text-primary">WE COME TO YOU</span>
             </h1>
             <p className="text-lg md:text-xl text-gray-200 mb-8 max-w-lg">
               Skip the waiting room. Our certified mechanics perform full-service oil changes in your driveway or office parking lot.
