@@ -2,13 +2,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Truck, Car, Phone, Mail, Facebook, Instagram, Twitter } from "lucide-react";
 import { Link } from "wouter";
+import heroImage from "@assets/stock_images/classic_muscle_car_b_0af1eeeb.jpg";
 
 export default function Home() {
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
-      <section className="bg-gradient-to-b from-primary to-secondary py-20 text-white">
-        <div className="container mx-auto px-4 text-center">
+      <section className="relative min-h-[500px] flex items-center justify-center text-white overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <img 
+            src={heroImage} 
+            alt="Classic car" 
+            className="w-full h-full object-cover grayscale"
+          />
+          <div className="absolute inset-0 bg-black/60" />
+        </div>
+        <div className="container mx-auto px-4 text-center relative z-10 py-20">
           <h1 className="text-4xl md:text-6xl font-display font-bold mb-6">
             No Time for an Oil Change?
           </h1>
@@ -16,7 +25,7 @@ export default function Home() {
             For a lower price than your local shop, we come to you.
           </p>
           <Link href="/booking">
-            <Button size="lg" className="bg-white text-primary hover:bg-gray-100 text-lg px-10 h-14 font-bold" data-testid="button-book-now">
+            <Button size="lg" className="bg-white text-black hover:bg-gray-200 text-lg px-10 h-14 font-bold" data-testid="button-book-now">
               Book Now
             </Button>
           </Link>
