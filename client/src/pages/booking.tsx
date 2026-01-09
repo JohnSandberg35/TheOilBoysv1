@@ -21,32 +21,24 @@ const formSchema = z.object({
   email: z.string().email("Invalid email address"),
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
   address: z.string().min(5, "Address is required"),
+  licensePlate: z.string().min(2, "License plate is required"),
   vehicleYear: z.string().min(4, "Year is required"),
   vehicleMake: z.string().min(2, "Make is required"),
   vehicleModel: z.string().min(2, "Model is required"),
-  oilType: z.string().min(1, "Please select an oil type"),
   isHighMileage: z.boolean(),
   date: z.date({ required_error: "Please select a date" }),
   timeSlot: z.string().min(1, "Please select a time"),
 });
 
-const OIL_TYPES = [
-  { id: "conventional", name: "Conventional", basePrice: 49 },
-  { id: "synthetic", name: "Full Synthetic", basePrice: 79 },
-];
-
+const BASE_PRICE = 79;
 const HIGH_MILEAGE_UPCHARGE = 15;
 
-function calculatePrice(oilType: string, isHighMileage: boolean): number {
-  const oil = OIL_TYPES.find(o => o.id === oilType);
-  if (!oil) return 0;
-  return oil.basePrice + (isHighMileage ? HIGH_MILEAGE_UPCHARGE : 0);
+function calculatePrice(isHighMileage: boolean): number {
+  return BASE_PRICE + (isHighMileage ? HIGH_MILEAGE_UPCHARGE : 0);
 }
 
-function getServiceDescription(oilType: string, isHighMileage: boolean): string {
-  const oil = OIL_TYPES.find(o => o.id === oilType);
-  if (!oil) return "";
-  return isHighMileage ? `${oil.name} + High Mileage` : oil.name;
+function getServiceDescription(isHighMileage: boolean): string {
+  return isHighMileage ? "Full Synthetic + High Mileage" : "Full Synthetic";
 }
 
 const TIME_SLOTS = [
@@ -66,24 +58,23 @@ export default function Booking() {
       email: "",
       phone: "",
       address: "",
+      licensePlate: "",
       vehicleYear: "",
       vehicleMake: "",
       vehicleModel: "",
-      oilType: "",
       isHighMileage: false,
       timeSlot: "",
     },
   });
 
-  const watchOilType = form.watch("oilType");
   const watchHighMileage = form.watch("isHighMileage");
-  const calculatedPrice = calculatePrice(watchOilType, watchHighMileage);
-  const serviceDescription = getServiceDescription(watchOilType, watchHighMileage);
+  const calculatedPrice = calculatePrice(watchHighMileage);
+  const serviceDescription = getServiceDescription(watchHighMileage);
 
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      const serviceType = getServiceDescription(data.oilType, data.isHighMileage);
-      const price = calculatePrice(data.oilType, data.isHighMileage);
+      const serviceType = getServiceDescription(data.isHighMileage);
+      const price = calculatePrice(data.isHighMileage);
       
       const response = await fetch('/api/appointments', {
         method: 'POST',
@@ -130,7 +121,7 @@ export default function Booking() {
 
   const nextStep = async () => {
     let fieldsToValidate: any[] = [];
-    if (step === 1) fieldsToValidate = ['vehicleYear', 'vehicleMake', 'vehicleModel', 'oilType'];
+    if (step === 1) fieldsToValidate = ['licensePlate', 'vehicleYear', 'vehicleMake', 'vehicleModel'];
     if (step === 2) fieldsToValidate = ['date', 'timeSlot', 'address'];
     
     const result = await form.trigger(fieldsToValidate);
@@ -172,6 +163,20 @@ export default function Booking() {
                 {/* Step 1: Vehicle & Service */}
                 {step === 1 && (
                   <div className="space-y-6 animate-in slide-in-from-right duration-300">
+                    <FormField
+                      control={form.control}
+                      name="licensePlate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>License Plate Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="ABC 1234" className="text-lg uppercase" {...field} data-testid="input-license-plate" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     <div className="grid grid-cols-3 gap-4">
                       <FormField
                         control={form.control}
@@ -216,30 +221,6 @@ export default function Booking() {
 
                     <FormField
                       control={form.control}
-                      name="oilType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Select Oil Type</FormLabel>
-                          <div className="grid md:grid-cols-2 gap-4">
-                            {OIL_TYPES.map((oil) => (
-                              <div 
-                                key={oil.id}
-                                className={`cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-primary/50 ${field.value === oil.id ? 'border-primary bg-primary/5' : 'border-muted'}`}
-                                onClick={() => field.onChange(oil.id)}
-                                data-testid={`oil-${oil.id}`}
-                              >
-                                <div className="font-bold">{oil.name}</div>
-                                <div className="text-lg text-muted-foreground mt-1">Starting at ${oil.basePrice}</div>
-                              </div>
-                            ))}
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
                       name="isHighMileage"
                       render={({ field }) => (
                         <FormItem>
@@ -251,7 +232,7 @@ export default function Booking() {
                               data-testid="mileage-under"
                             >
                               <div className="font-bold">Under 75,000</div>
-                              <div className="text-sm text-muted-foreground">Standard oil</div>
+                              <div className="text-sm text-muted-foreground">Full Synthetic</div>
                             </div>
                             <div 
                               className={`cursor-pointer rounded-lg border-2 p-4 text-center transition-all hover:border-primary/50 ${field.value === true ? 'border-primary bg-primary/5' : 'border-muted'}`}
@@ -267,13 +248,11 @@ export default function Booking() {
                       )}
                     />
 
-                    {watchOilType && (
-                      <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 text-center">
-                        <p className="text-sm text-muted-foreground mb-1">Your Estimated Price</p>
-                        <p className="text-3xl font-display font-bold text-primary">${calculatedPrice}</p>
-                        <p className="text-sm text-muted-foreground mt-1">{serviceDescription}</p>
-                      </div>
-                    )}
+                    <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 text-center">
+                      <p className="text-sm text-muted-foreground mb-1">Your Estimated Price</p>
+                      <p className="text-3xl font-display font-bold text-primary">${calculatedPrice}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{serviceDescription}</p>
+                    </div>
                   </div>
                 )}
 
