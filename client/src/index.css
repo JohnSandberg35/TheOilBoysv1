@@ -50,51 +50,51 @@
 }
 
 :root {
-  /* The Oil Boys Theme - Clean & Professional */
+  /* The Oil Boys Theme - Black & White Classic */
   
   /* Background: Clean white */
   --background: 0 0% 100%;
-  --foreground: 220 25% 20%;
+  --foreground: 0 0% 10%;
 
-  /* Cards: White with subtle shadow */
+  /* Cards: White */
   --card: 0 0% 100%;
-  --card-foreground: 220 25% 20%;
+  --card-foreground: 0 0% 10%;
 
   /* Popover */
   --popover: 0 0% 100%;
-  --popover-foreground: 220 25% 20%;
+  --popover-foreground: 0 0% 10%;
 
-  /* Primary: Dark Navy Blue */
-  --primary: 220 60% 25%;
+  /* Primary: Black */
+  --primary: 0 0% 10%;
   --primary-foreground: 0 0% 100%;
 
-  /* Secondary: Lighter Navy */
-  --secondary: 220 50% 35%;
+  /* Secondary: Dark Grey */
+  --secondary: 0 0% 20%;
   --secondary-foreground: 0 0% 100%;
 
   /* Muted: Light Grey */
-  --muted: 210 15% 95%;
-  --muted-foreground: 220 15% 45%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
 
-  /* Accent: Light blue tint */
-  --accent: 210 50% 95%;
-  --accent-foreground: 220 60% 25%;
+  /* Accent: Very Light Grey */
+  --accent: 0 0% 96%;
+  --accent-foreground: 0 0% 10%;
 
   /* Destructive: Red */
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
 
   /* Borders */
-  --border: 220 15% 88%;
-  --input: 220 15% 88%;
-  --ring: 220 60% 25%;
+  --border: 0 0% 88%;
+  --input: 0 0% 88%;
+  --ring: 0 0% 10%;
 
   /* Charts */
-  --chart-1: 220 60% 25%;
-  --chart-2: 220 50% 35%;
-  --chart-3: 199 89% 48%;
-  --chart-4: 43 74% 66%;
-  --chart-5: 27 87% 67%;
+  --chart-1: 0 0% 10%;
+  --chart-2: 0 0% 30%;
+  --chart-3: 0 0% 50%;
+  --chart-4: 0 0% 70%;
+  --chart-5: 0 0% 90%;
   
   --radius: 0.5rem;
 }

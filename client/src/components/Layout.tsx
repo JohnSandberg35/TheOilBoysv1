@@ -3,7 +3,7 @@ import { Wrench, Calendar, User, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import logoImage from "@assets/generated_images/modern_clean_typography_logo_for_the_oil_boys.png";
+import logoImage from "../assets/logo.png";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
