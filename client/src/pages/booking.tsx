@@ -30,7 +30,7 @@ const formSchema = z.object({
   timeSlot: z.string().min(1, "Please select a time"),
 });
 
-const BASE_PRICE = 79;
+const BASE_PRICE = 85;
 const HIGH_MILEAGE_UPCHARGE = 15;
 
 function calculatePrice(isHighMileage: boolean): number {

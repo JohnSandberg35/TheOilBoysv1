@@ -1,171 +1,142 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Clock, Shield, Star } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Calendar, Truck, Car, Phone, Mail, Facebook, Instagram, Twitter } from "lucide-react";
 import { Link } from "wouter";
-import heroImage from "@assets/generated_images/cinematic_shot_of_a_modern_car_grille_and_headlights_with_mountains_reflection.png";
-import { motion } from "framer-motion";
 
 export default function Home() {
   return (
-    <div className="flex flex-col gap-0">
+    <div className="flex flex-col">
       {/* Hero Section */}
-      <section className="relative h-[600px] flex items-center overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <img 
-            src={heroImage} 
-            alt="Mechanic working on car" 
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-secondary/90 to-secondary/40" />
-        </div>
-        
-        <div className="container mx-auto px-4 relative z-10">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="max-w-2xl text-white"
-          >
-            <div className="inline-block bg-primary text-primary-foreground px-3 py-1 text-sm font-bold uppercase tracking-wider mb-4 rounded-sm">
-              Serving Utah County
-            </div>
-            <h1 className="text-5xl md:text-7xl font-display font-bold mb-6 leading-none">
-              THE OIL BOYS <br />
-              <span className="text-primary">WE COME TO YOU</span>
-            </h1>
-            <p className="text-lg md:text-xl text-gray-200 mb-8 max-w-lg">
-              Skip the waiting room. Our certified mechanics perform full-service oil changes in your driveway or office parking lot.
-            </p>
-            <div className="flex gap-4">
-              <Link href="/booking">
-                <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 text-lg px-8 h-14 font-bold uppercase tracking-wide">
-                  Schedule Now
-                </Button>
-              </Link>
-              <Button variant="outline" size="lg" className="text-white border-white hover:bg-white/10 text-lg px-8 h-14 font-bold uppercase tracking-wide">
-                Learn More
-              </Button>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Features Grid */}
-      <section className="py-20 bg-background">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8">
-            <FeatureCard 
-              icon={Clock}
-              title="Save Time"
-              description="No more driving to the shop and waiting for hours. We service your car while you work or relax."
-            />
-            <FeatureCard 
-              icon={Shield}
-              title="Certified Mechanics"
-              description="Our team consists of fully vetted, insured, and experienced mechanics you can trust."
-            />
-            <FeatureCard 
-              icon={Star}
-              title="Premium Products"
-              description="We only use top-tier synthetic oils and filters to ensure your engine runs smoother, longer."
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Services Section */}
-      <section className="py-20 bg-muted/30 border-y border-border">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-display font-bold text-secondary mb-4">Our Services</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Simple, transparent pricing. All services include a multi-point inspection and fluid top-off.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <ServiceCard 
-              title="Standard Blend"
-              price="$59"
-              features={["5 Quarts Conventional Oil", "Standard Filter", "Multi-point Inspection", "Tire Pressure Check"]}
-            />
-            <ServiceCard 
-              title="Full Synthetic"
-              price="$89"
-              features={["5 Quarts Synthetic Oil", "Premium Filter", "Multi-point Inspection", "Tire Pressure Check", "Fluid Top-off"]}
-              featured={true}
-            />
-            <ServiceCard 
-              title="High Mileage"
-              price="$79"
-              features={["5 Quarts High Mileage Oil", "Premium Filter", "Multi-point Inspection", "Leak Prevention Additives"]}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-secondary text-white">
+      <section className="bg-gradient-to-b from-primary to-secondary py-20 text-white">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl font-display font-bold mb-6">Ready for a smoother ride?</h2>
-          <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Join thousands of happy customers who have switched to the most convenient oil change service.
+          <h1 className="text-4xl md:text-6xl font-display font-bold mb-6">
+            No Time for an Oil Change?
+          </h1>
+          <p className="text-xl md:text-2xl mb-8 text-white/90 max-w-2xl mx-auto">
+            For a lower price than your local shop, we come to you.
           </p>
           <Link href="/booking">
-            <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 text-lg px-12 h-16 font-bold uppercase tracking-wide">
-              Book Appointment
+            <Button size="lg" className="bg-white text-primary hover:bg-gray-100 text-lg px-10 h-14 font-bold" data-testid="button-book-now">
+              Book Now
             </Button>
           </Link>
         </div>
       </section>
+
+      {/* How It Works */}
+      <section className="py-20 bg-background">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl md:text-4xl font-display font-bold text-center mb-4">
+            Premium Oil Change Service
+          </h2>
+          <div className="w-24 h-1 bg-primary mx-auto mb-12"></div>
+          
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <StepCard 
+              number="1"
+              icon={Calendar}
+              title="Pick a Time"
+              description="Fill out our booking form to schedule a time that works for you. We'll reach out to confirm your appointment."
+            />
+            <StepCard 
+              number="2"
+              icon={Truck}
+              title="We'll Stop By"
+              description="When the time comes, we'll come to you to start the change!"
+            />
+            <StepCard 
+              number="3"
+              icon={Car}
+              title="Drive With Confidence"
+              description="Tired of keeping track of vehicle maintenance? We manage a schedule for your vehicle's needs, including reminders for your next oil change!"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="py-16 bg-muted">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Price</h2>
+          <div className="w-24 h-1 bg-primary mx-auto mb-8"></div>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-4">
+            Starting at <span className="text-primary font-bold text-3xl">$85</span> for most vehicles
+          </p>
+          <p className="text-muted-foreground max-w-xl mx-auto">
+            Our service includes complimentary wiper fluid top-off and tire air pressure check.
+          </p>
+          <Link href="/booking">
+            <Button size="lg" className="mt-8 bg-primary text-primary-foreground hover:bg-primary/90 text-lg px-10 h-14 font-bold" data-testid="button-book-pricing">
+              Book Your Appointment
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Referral Section */}
+      <section className="py-16 bg-primary text-white">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-2xl md:text-3xl font-display font-bold mb-4">
+            Share to Save Big!
+          </h2>
+          <p className="text-xl">
+            Refer a friend to get <span className="font-bold text-2xl">20% off</span> your next oil change.
+          </p>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section className="py-16 bg-background">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-2 gap-12 max-w-4xl mx-auto">
+            <div>
+              <h3 className="text-2xl font-display font-bold mb-6">Contact Us</h3>
+              <div className="space-y-4">
+                <a href="tel:3852691482" className="flex items-center gap-3 text-lg text-muted-foreground hover:text-primary transition-colors">
+                  <Phone className="w-5 h-5" />
+                  <span>Call or Text: (385) 269-1482</span>
+                </a>
+                <a href="mailto:theoilboysllc@gmail.com" className="flex items-center gap-3 text-lg text-muted-foreground hover:text-primary transition-colors">
+                  <Mail className="w-5 h-5" />
+                  <span>theoilboysllc@gmail.com</span>
+                </a>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-2xl font-display font-bold mb-6">Social Media</h3>
+              <div className="flex gap-4">
+                <a href="https://www.facebook.com/profile.php?id=61558814451469" target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center hover:bg-primary/80 transition-colors" data-testid="link-facebook">
+                  <Facebook className="w-6 h-6" />
+                </a>
+                <a href="https://www.instagram.com/theoilboysllc" target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center hover:bg-primary/80 transition-colors" data-testid="link-instagram">
+                  <Instagram className="w-6 h-6" />
+                </a>
+                <a href="https://x.com/theoilboysllc" target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center hover:bg-primary/80 transition-colors" data-testid="link-twitter">
+                  <Twitter className="w-6 h-6" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
 
-function FeatureCard({ icon: Icon, title, description }: { icon: any, title: string, description: string }) {
+function StepCard({ number, icon: Icon, title, description }: { number: string, icon: any, title: string, description: string }) {
   return (
-    <div className="flex flex-col items-center text-center p-6 rounded-lg bg-card border shadow-sm">
-      <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6 text-primary">
-        <Icon className="w-8 h-8" />
-      </div>
-      <h3 className="text-xl font-bold mb-3">{title}</h3>
-      <p className="text-muted-foreground">{description}</p>
-    </div>
-  );
-}
-
-function ServiceCard({ title, price, features, featured = false }: { title: string, price: string, features: string[], featured?: boolean }) {
-  return (
-    <Card className={`relative flex flex-col ${featured ? 'border-primary shadow-lg ring-1 ring-primary' : ''}`}>
-      {featured && (
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-          Most Popular
+    <Card className="text-center p-6 border-2 hover:border-primary transition-colors">
+      <CardContent className="pt-6">
+        <div className="w-16 h-16 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold">
+          {number}
         </div>
-      )}
-      <CardHeader className="text-center pb-2">
-        <CardTitle className="text-xl font-bold uppercase tracking-wide">{title}</CardTitle>
-        <div className="mt-4">
-          <span className="text-4xl font-display font-bold">{price}</span>
-          <span className="text-muted-foreground">/service</span>
+        <div className="w-12 h-12 text-primary mx-auto mb-4">
+          <Icon className="w-full h-full" />
         </div>
-      </CardHeader>
-      <CardContent className="flex-1">
-        <ul className="space-y-3 mt-4">
-          {features.map((feature, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-              <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-              {feature}
-            </li>
-          ))}
-        </ul>
+        <h3 className="text-xl font-bold mb-3">{title}</h3>
+        <p className="text-muted-foreground">{description}</p>
       </CardContent>
-      <CardFooter>
-        <Link href="/booking" className="w-full">
-          <Button className={`w-full font-bold uppercase ${featured ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}`} variant={featured ? 'default' : 'outline'}>
-            Select Plan
-          </Button>
-        </Link>
-      </CardFooter>
     </Card>
   );
 }

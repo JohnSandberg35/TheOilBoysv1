@@ -50,53 +50,53 @@
 }
 
 :root {
-  /* Clean Industrial Theme */
+  /* The Oil Boys Theme - Clean & Professional */
   
-  /* Background: Off-white / very light grey */
-  --background: 210 20% 98%;
-  --foreground: 220 20% 15%; /* Dark Navy Grey */
+  /* Background: Clean white */
+  --background: 0 0% 100%;
+  --foreground: 220 25% 20%;
 
-  /* Cards: White */
+  /* Cards: White with subtle shadow */
   --card: 0 0% 100%;
-  --card-foreground: 220 20% 15%;
+  --card-foreground: 220 25% 20%;
 
   /* Popover */
   --popover: 0 0% 100%;
-  --popover-foreground: 220 20% 15%;
+  --popover-foreground: 220 25% 20%;
 
-  /* Primary: Amber/Gold (Motor Oil) - Bold and attention grabbing */
-  --primary: 215 100% 45%; /* Blue */
-  --primary-foreground: 0 0% 100%; /* White text on blue */
+  /* Primary: Dark Navy Blue */
+  --primary: 220 60% 25%;
+  --primary-foreground: 0 0% 100%;
 
-  /* Secondary: Deep Navy (Mechanic Uniform) */
-  --secondary: 220 30% 15%;
-  --secondary-foreground: 0 0% 100%; /* White text on navy */
+  /* Secondary: Lighter Navy */
+  --secondary: 220 50% 35%;
+  --secondary-foreground: 0 0% 100%;
 
   /* Muted: Light Grey */
-  --muted: 210 20% 90%;
-  --muted-foreground: 215 15% 40%;
+  --muted: 210 15% 95%;
+  --muted-foreground: 220 15% 45%;
 
-  /* Accent: Subtle cool grey for hover states */
-  --accent: 210 10% 90%;
-  --accent-foreground: 220 20% 15%;
+  /* Accent: Light blue tint */
+  --accent: 210 50% 95%;
+  --accent-foreground: 220 60% 25%;
 
   /* Destructive: Red */
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
 
   /* Borders */
-  --border: 220 15% 90%;
-  --input: 220 15% 90%;
-  --ring: 45 100% 50%;
+  --border: 220 15% 88%;
+  --input: 220 15% 88%;
+  --ring: 220 60% 25%;
 
   /* Charts */
-  --chart-1: 45 100% 50%;
-  --chart-2: 220 30% 15%;
+  --chart-1: 220 60% 25%;
+  --chart-2: 220 50% 35%;
   --chart-3: 199 89% 48%;
   --chart-4: 43 74% 66%;
   --chart-5: 27 87% 67%;
   
-  --radius: 0.25rem; /* Industrial feeling usually has tighter radii */
+  --radius: 0.5rem;
 }
 
 .dark {

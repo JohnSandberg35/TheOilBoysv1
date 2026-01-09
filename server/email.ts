@@ -59,14 +59,14 @@ export async function sendBookingConfirmation(data: BookingEmailData) {
         </p>
         
         <p style="color: #64748b; font-size: 0.9em;">
-          Questions? Contact us at 801-555-OILS or reply to this email.
+          Questions? Contact us at (385) 269-1482 or reply to this email.
         </p>
       </div>
       
       <div style="background: #1e293b; padding: 20px; text-align: center;">
         <p style="color: #94a3b8; margin: 0; font-size: 0.8em;">
           The Oil Boys LLC | Utah County, UT<br>
-          801-555-OILS | theoilboysllc@gmail.com
+          (385) 269-1482 | theoilboysllc@gmail.com
         </p>
       </div>
     </div>

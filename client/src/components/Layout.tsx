@@ -69,27 +69,27 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      <footer className="bg-secondary text-secondary-foreground py-12">
+      <footer className="bg-primary text-white py-12">
         <div className="container mx-auto px-4 grid md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <span className="font-display text-2xl font-bold tracking-tighter text-white">
-                THE OIL<span className="text-primary"> BOYS</span>
+              <span className="font-display text-2xl font-bold tracking-tighter">
+                THE OIL BOYS
               </span>
             </div>
-            <p className="text-gray-400 text-sm">
+            <p className="text-white/70 text-sm">
               Professional mobile oil change service. We come to you, so you can keep moving.
             </p>
           </div>
           <div>
-            <h4 className="font-display text-lg mb-4 text-white">Contact</h4>
-            <p className="text-gray-400 text-sm">801-555-OILS</p>
-            <p className="text-gray-400 text-sm">service@oilboys.com</p>
+            <h4 className="font-display text-lg mb-4">Contact</h4>
+            <p className="text-white/70 text-sm">(385) 269-1482</p>
+            <p className="text-white/70 text-sm">theoilboysllc@gmail.com</p>
           </div>
           <div>
-            <h4 className="font-display text-lg mb-4 text-white">Service Areas</h4>
-            <p className="text-gray-400 text-sm">Utah County</p>
-            <p className="text-gray-400 text-sm">Orem, Provo, Lehi & Surrounds</p>
+            <h4 className="font-display text-lg mb-4">Service Areas</h4>
+            <p className="text-white/70 text-sm">Utah County</p>
+            <p className="text-white/70 text-sm">Orem, Provo, Lehi & Surrounds</p>
           </div>
         </div>
       </footer>
