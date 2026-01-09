@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertAppointmentSchema } from "@shared/schema";
 import { z } from "zod";
+import { sendBookingConfirmation } from "./email";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -44,6 +45,22 @@ export async function registerRoutes(
     try {
       const validatedData = insertAppointmentSchema.parse(req.body);
       const appointment = await storage.createAppointment(validatedData);
+      
+      // Send confirmation emails (don't block the response)
+      sendBookingConfirmation({
+        customerName: appointment.customerName,
+        customerEmail: appointment.customerEmail,
+        vehicleYear: appointment.vehicleYear,
+        vehicleMake: appointment.vehicleMake,
+        vehicleModel: appointment.vehicleModel,
+        licensePlate: appointment.licensePlate || undefined,
+        serviceType: appointment.serviceType,
+        price: appointment.price,
+        date: appointment.date,
+        timeSlot: appointment.timeSlot,
+        address: appointment.address,
+      }).catch(err => console.error('Email send failed:', err));
+      
       res.status(201).json(appointment);
     } catch (error) {
       if (error instanceof z.ZodError) {

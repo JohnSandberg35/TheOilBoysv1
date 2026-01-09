@@ -13,10 +13,14 @@ type Appointment = {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
-  vehicle: string;
+  licensePlate: string | null;
+  vehicleYear: string;
+  vehicleMake: string;
+  vehicleModel: string;
   serviceType: string;
+  price: number;
   date: string;
-  time: string;
+  timeSlot: string;
   address: string;
   status: 'scheduled' | 'in-progress' | 'completed';
   mechanicId: string | null;
@@ -262,7 +266,7 @@ function JobCard({
                 </div>
               </div>
               <Badge variant={active ? "default" : "secondary"} className={active ? "bg-primary text-primary-foreground" : ""}>
-                {appointment.time}
+                {appointment.timeSlot}
               </Badge>
             </div>
 
@@ -270,8 +274,9 @@ function JobCard({
               <div className="flex items-start gap-3">
                 <Car className="w-5 h-5 text-muted-foreground mt-0.5" />
                 <div>
-                  <p className="font-semibold">{appointment.vehicle}</p>
-                  <p className="text-muted-foreground">{appointment.serviceType}</p>
+                  <p className="font-semibold">{appointment.vehicleYear} {appointment.vehicleMake} {appointment.vehicleModel}</p>
+                  <p className="text-muted-foreground">{appointment.serviceType} - ${appointment.price}</p>
+                  {appointment.licensePlate && <p className="text-xs text-muted-foreground">Plate: {appointment.licensePlate}</p>}
                 </div>
               </div>
               
