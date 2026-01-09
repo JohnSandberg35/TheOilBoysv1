@@ -24,16 +24,30 @@ const formSchema = z.object({
   vehicleYear: z.string().min(4, "Year is required"),
   vehicleMake: z.string().min(2, "Make is required"),
   vehicleModel: z.string().min(2, "Model is required"),
-  serviceType: z.string().min(1, "Please select a service"),
+  oilType: z.string().min(1, "Please select an oil type"),
+  isHighMileage: z.boolean(),
   date: z.date({ required_error: "Please select a date" }),
   timeSlot: z.string().min(1, "Please select a time"),
 });
 
-const SERVICE_TYPES = [
-  { id: "standard", name: "Standard Blend", price: "$59" },
-  { id: "synthetic", name: "Full Synthetic", price: "$89" },
-  { id: "high_mileage", name: "High Mileage", price: "$79" },
+const OIL_TYPES = [
+  { id: "conventional", name: "Conventional", basePrice: 49 },
+  { id: "synthetic", name: "Full Synthetic", basePrice: 79 },
 ];
+
+const HIGH_MILEAGE_UPCHARGE = 15;
+
+function calculatePrice(oilType: string, isHighMileage: boolean): number {
+  const oil = OIL_TYPES.find(o => o.id === oilType);
+  if (!oil) return 0;
+  return oil.basePrice + (isHighMileage ? HIGH_MILEAGE_UPCHARGE : 0);
+}
+
+function getServiceDescription(oilType: string, isHighMileage: boolean): string {
+  const oil = OIL_TYPES.find(o => o.id === oilType);
+  if (!oil) return "";
+  return isHighMileage ? `${oil.name} + High Mileage` : oil.name;
+}
 
 const TIME_SLOTS = [
   "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM", 
@@ -55,13 +69,22 @@ export default function Booking() {
       vehicleYear: "",
       vehicleMake: "",
       vehicleModel: "",
-      serviceType: "",
+      oilType: "",
+      isHighMileage: false,
       timeSlot: "",
     },
   });
 
+  const watchOilType = form.watch("oilType");
+  const watchHighMileage = form.watch("isHighMileage");
+  const calculatedPrice = calculatePrice(watchOilType, watchHighMileage);
+  const serviceDescription = getServiceDescription(watchOilType, watchHighMileage);
+
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
+      const serviceType = getServiceDescription(data.oilType, data.isHighMileage);
+      const price = calculatePrice(data.oilType, data.isHighMileage);
+      
       const response = await fetch('/api/appointments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -70,7 +93,7 @@ export default function Booking() {
           customerEmail: data.email,
           customerPhone: data.phone,
           vehicle: `${data.vehicleYear} ${data.vehicleMake} ${data.vehicleModel}`,
-          serviceType: data.serviceType,
+          serviceType: `${serviceType} - $${price}`,
           date: format(data.date, 'yyyy-MM-dd'),
           time: data.timeSlot,
           address: data.address,
@@ -107,7 +130,7 @@ export default function Booking() {
 
   const nextStep = async () => {
     let fieldsToValidate: any[] = [];
-    if (step === 1) fieldsToValidate = ['vehicleYear', 'vehicleMake', 'vehicleModel', 'serviceType'];
+    if (step === 1) fieldsToValidate = ['vehicleYear', 'vehicleMake', 'vehicleModel', 'oilType'];
     if (step === 2) fieldsToValidate = ['date', 'timeSlot', 'address'];
     
     const result = await form.trigger(fieldsToValidate);
@@ -193,20 +216,20 @@ export default function Booking() {
 
                     <FormField
                       control={form.control}
-                      name="serviceType"
+                      name="oilType"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Select Service</FormLabel>
-                          <div className="grid md:grid-cols-3 gap-4">
-                            {SERVICE_TYPES.map((service) => (
+                          <FormLabel>Select Oil Type</FormLabel>
+                          <div className="grid md:grid-cols-2 gap-4">
+                            {OIL_TYPES.map((oil) => (
                               <div 
-                                key={service.id}
-                                className={`cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-primary/50 ${field.value === service.name ? 'border-primary bg-primary/5' : 'border-muted'}`}
-                                onClick={() => field.onChange(service.name)}
-                                data-testid={`service-${service.id}`}
+                                key={oil.id}
+                                className={`cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-primary/50 ${field.value === oil.id ? 'border-primary bg-primary/5' : 'border-muted'}`}
+                                onClick={() => field.onChange(oil.id)}
+                                data-testid={`oil-${oil.id}`}
                               >
-                                <div className="font-bold">{service.name}</div>
-                                <div className="text-2xl font-display font-bold text-primary mt-2">{service.price}</div>
+                                <div className="font-bold">{oil.name}</div>
+                                <div className="text-lg text-muted-foreground mt-1">Starting at ${oil.basePrice}</div>
                               </div>
                             ))}
                           </div>
@@ -214,6 +237,43 @@ export default function Booking() {
                         </FormItem>
                       )}
                     />
+
+                    <FormField
+                      control={form.control}
+                      name="isHighMileage"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Is your vehicle over 75,000 miles?</FormLabel>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div 
+                              className={`cursor-pointer rounded-lg border-2 p-4 text-center transition-all hover:border-primary/50 ${field.value === false ? 'border-primary bg-primary/5' : 'border-muted'}`}
+                              onClick={() => field.onChange(false)}
+                              data-testid="mileage-under"
+                            >
+                              <div className="font-bold">Under 75,000</div>
+                              <div className="text-sm text-muted-foreground">Standard oil</div>
+                            </div>
+                            <div 
+                              className={`cursor-pointer rounded-lg border-2 p-4 text-center transition-all hover:border-primary/50 ${field.value === true ? 'border-primary bg-primary/5' : 'border-muted'}`}
+                              onClick={() => field.onChange(true)}
+                              data-testid="mileage-over"
+                            >
+                              <div className="font-bold">Over 75,000</div>
+                              <div className="text-sm text-muted-foreground">+${HIGH_MILEAGE_UPCHARGE} High Mileage</div>
+                            </div>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {watchOilType && (
+                      <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 text-center">
+                        <p className="text-sm text-muted-foreground mb-1">Your Estimated Price</p>
+                        <p className="text-3xl font-display font-bold text-primary">${calculatedPrice}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{serviceDescription}</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -351,9 +411,12 @@ export default function Booking() {
                         Summary
                       </h4>
                       <p><span className="font-semibold">Vehicle:</span> {form.getValues('vehicleYear')} {form.getValues('vehicleMake')} {form.getValues('vehicleModel')}</p>
-                      <p><span className="font-semibold">Service:</span> {form.getValues('serviceType')}</p>
+                      <p><span className="font-semibold">Service:</span> {serviceDescription}</p>
                       <p><span className="font-semibold">When:</span> {form.getValues('date') ? format(form.getValues('date'), 'PPP') : ''} at {form.getValues('timeSlot')}</p>
                       <p><span className="font-semibold">Where:</span> {form.getValues('address')}</p>
+                      <div className="border-t pt-2 mt-2">
+                        <p className="text-lg font-bold">Total: <span className="text-primary">${calculatedPrice}</span></p>
+                      </div>
                     </div>
                   </div>
                 )}
