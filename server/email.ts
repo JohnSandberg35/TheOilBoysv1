@@ -2,7 +2,7 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = 'The Oil Boys <bookings@theoilboys.org>';
+const FROM_EMAIL = 'The Oil Boys <onboarding@resend.dev>';
 const BUSINESS_EMAIL = 'theoilboysllc@gmail.com';
 
 interface BookingEmailData {
