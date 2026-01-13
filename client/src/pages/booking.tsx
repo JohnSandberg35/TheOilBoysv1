@@ -30,15 +30,10 @@ const formSchema = z.object({
   timeSlot: z.string().min(1, "Please select a time"),
 });
 
-const BASE_PRICE = 85;
-const HIGH_MILEAGE_UPCHARGE = 15;
-
-function calculatePrice(isHighMileage: boolean): number {
-  return BASE_PRICE + (isHighMileage ? HIGH_MILEAGE_UPCHARGE : 0);
-}
+const BASE_PRICE = 95;
 
 function getServiceDescription(isHighMileage: boolean): string {
-  return isHighMileage ? "Full Synthetic + High Mileage" : "Full Synthetic";
+  return isHighMileage ? "Full Synthetic (High Mileage)" : "Full Synthetic";
 }
 
 const TIME_SLOTS = [
@@ -67,14 +62,9 @@ export default function Booking() {
     },
   });
 
-  const watchHighMileage = form.watch("isHighMileage");
-  const calculatedPrice = calculatePrice(watchHighMileage);
-  const serviceDescription = getServiceDescription(watchHighMileage);
-
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
       const serviceType = getServiceDescription(data.isHighMileage);
-      const price = calculatePrice(data.isHighMileage);
       
       const response = await fetch('/api/appointments', {
         method: 'POST',
@@ -88,7 +78,7 @@ export default function Booking() {
           vehicleMake: data.vehicleMake,
           vehicleModel: data.vehicleModel,
           serviceType,
-          price,
+          price: BASE_PRICE,
           date: format(data.date, 'yyyy-MM-dd'),
           timeSlot: data.timeSlot,
           address: data.address,
@@ -236,7 +226,6 @@ export default function Booking() {
                               data-testid="mileage-under"
                             >
                               <div className="font-bold">Under 75,000</div>
-                              <div className="text-sm text-muted-foreground">Full Synthetic</div>
                             </div>
                             <div 
                               className={`cursor-pointer rounded-lg border-2 p-4 text-center transition-all hover:border-primary/50 ${field.value === true ? 'border-primary bg-primary/5' : 'border-muted'}`}
@@ -244,19 +233,12 @@ export default function Booking() {
                               data-testid="mileage-over"
                             >
                               <div className="font-bold">Over 75,000</div>
-                              <div className="text-sm text-muted-foreground">+${HIGH_MILEAGE_UPCHARGE} High Mileage</div>
                             </div>
                           </div>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
-                    <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 text-center">
-                      <p className="text-sm text-muted-foreground mb-1">Your Estimated Price</p>
-                      <p className="text-3xl font-display font-bold text-primary">${calculatedPrice}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{serviceDescription}</p>
-                    </div>
                   </div>
                 )}
 
@@ -394,11 +376,11 @@ export default function Booking() {
                         Summary
                       </h4>
                       <p><span className="font-semibold">Vehicle:</span> {form.getValues('vehicleYear')} {form.getValues('vehicleMake')} {form.getValues('vehicleModel')}</p>
-                      <p><span className="font-semibold">Service:</span> {serviceDescription}</p>
+                      <p><span className="font-semibold">Service:</span> {getServiceDescription(form.getValues('isHighMileage'))}</p>
                       <p><span className="font-semibold">When:</span> {form.getValues('date') ? format(form.getValues('date'), 'PPP') : ''} at {form.getValues('timeSlot')}</p>
                       <p><span className="font-semibold">Where:</span> {form.getValues('address')}</p>
                       <div className="border-t pt-2 mt-2">
-                        <p className="text-lg font-bold">Total: <span className="text-primary">${calculatedPrice}</span></p>
+                        <p className="text-lg font-bold">Total: <span className="text-primary">${BASE_PRICE}</span></p>
                       </div>
                     </div>
                   </div>
