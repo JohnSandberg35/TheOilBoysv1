@@ -1,14 +1,28 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const mechanics = pgTable("mechanics", {
+export const managers = pgTable("managers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),
+});
+
+export const insertManagerSchema = createInsertSchema(managers).omit({ id: true });
+export type InsertManager = z.infer<typeof insertManagerSchema>;
+export type Manager = typeof managers.$inferSelect;
+
+export const mechanics = pgTable("mechanics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
   phone: text("phone"),
+  photoUrl: text("photo_url"),
+  bio: text("bio"),
+  oilChangeCount: integer("oil_change_count").notNull().default(0),
+  backgroundCheckVerified: boolean("background_check_verified").notNull().default(false),
+  isPublic: boolean("is_public").notNull().default(true),
 });
 
 export const insertMechanicSchema = createInsertSchema(mechanics).omit({ id: true });
