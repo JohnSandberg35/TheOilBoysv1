@@ -1,10 +1,30 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Truck, Car, Phone, Mail, Facebook, Instagram, Twitter } from "lucide-react";
+import { Calendar, Truck, Car, Phone, Mail, Facebook, Instagram, Twitter, Shield, User, Wrench } from "lucide-react";
 import { Link } from "wouter";
 import heroImage from "@assets/stock_images/classic_muscle_car_b_0af1eeeb.jpg";
+import { useQuery } from "@tanstack/react-query";
+
+type Mechanic = {
+  id: string;
+  name: string;
+  phone: string | null;
+  photoUrl: string | null;
+  bio: string | null;
+  oilChangeCount: number;
+  backgroundCheckVerified: boolean;
+  isPublic: boolean;
+};
 
 export default function Home() {
+  const { data: mechanics = [] } = useQuery<Mechanic[]>({
+    queryKey: ['publicMechanics'],
+    queryFn: async () => {
+      const response = await fetch('/api/mechanics/public');
+      if (!response.ok) throw new Error('Failed to fetch');
+      return response.json();
+    },
+  });
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
@@ -82,6 +102,24 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Meet the Mechanics Section */}
+      {mechanics.length > 0 && (
+        <section className="py-16 bg-background">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl md:text-4xl font-display font-bold text-center mb-4">
+              Meet Our Mechanics
+            </h2>
+            <div className="w-24 h-1 bg-primary mx-auto mb-12"></div>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              {mechanics.map(mechanic => (
+                <MechanicCard key={mechanic.id} mechanic={mechanic} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Referral Section */}
       <section className="py-16 bg-primary text-white">
         <div className="container mx-auto px-4 text-center">
@@ -145,6 +183,40 @@ function StepCard({ number, icon: Icon, title, description }: { number: string, 
         </div>
         <h3 className="text-xl font-bold mb-3">{title}</h3>
         <p className="text-muted-foreground">{description}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MechanicCard({ mechanic }: { mechanic: Mechanic }) {
+  return (
+    <Card className="overflow-hidden">
+      <CardContent className="p-6">
+        <div className="flex flex-col items-center text-center">
+          <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center overflow-hidden mb-4">
+            {mechanic.photoUrl ? (
+              <img src={mechanic.photoUrl} alt={mechanic.name} className="w-full h-full object-cover" />
+            ) : (
+              <User className="w-12 h-12 text-muted-foreground" />
+            )}
+          </div>
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-xl font-bold">{mechanic.name}</h3>
+            {mechanic.backgroundCheckVerified && (
+              <Shield className="w-5 h-5 text-green-600" />
+            )}
+          </div>
+          {mechanic.backgroundCheckVerified && (
+            <span className="text-xs text-green-600 font-medium mb-2">Background Verified</span>
+          )}
+          {mechanic.bio && (
+            <p className="text-muted-foreground text-sm mb-4">{mechanic.bio}</p>
+          )}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Wrench className="w-4 h-4" />
+            <span>{mechanic.oilChangeCount} oil changes completed</span>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

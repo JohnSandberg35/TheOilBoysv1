@@ -7,7 +7,7 @@ import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/Layout";
 import Home from "@/pages/home";
 import Booking from "@/pages/booking";
-import Mechanic from "@/pages/mechanic";
+import ManagerPage from "@/pages/manager";
 
 function Router() {
   return (
@@ -15,7 +15,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/booking" component={Booking} />
-        <Route path="/mechanic" component={Mechanic} />
+        <Route path="/manage" component={ManagerPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

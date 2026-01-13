@@ -1,9 +1,23 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertAppointmentSchema, insertMechanicSchema } from "@shared/schema";
 import { z } from "zod";
 import { sendBookingConfirmation } from "./email";
+import crypto from "crypto";
+
+function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password).digest("hex");
+}
+
+function requireManagerAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session?.managerId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+}
+
+const updateMechanicSchema = insertMechanicSchema.partial();
 
 export async function registerRoutes(
   httpServer: Server,
@@ -16,9 +30,15 @@ export async function registerRoutes(
       const { email, password } = req.body;
       
       const manager = await storage.getManagerByEmail(email);
-      if (!manager || manager.password !== password) {
+      const hashedPassword = hashPassword(password);
+      
+      if (!manager || manager.password !== hashedPassword) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
+      
+      req.session.managerId = manager.id;
+      req.session.managerEmail = manager.email;
+      req.session.managerName = manager.name;
       
       res.json({ 
         id: manager.id, 
@@ -27,6 +47,27 @@ export async function registerRoutes(
       });
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/manager/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: "Failed to logout" });
+      }
+      res.json({ success: true });
+    });
+  });
+
+  app.get("/api/manager/session", (req, res) => {
+    if (req.session?.managerId) {
+      res.json({
+        id: req.session.managerId,
+        email: req.session.managerEmail,
+        name: req.session.managerName,
+      });
+    } else {
+      res.status(401).json({ error: "Not authenticated" });
     }
   });
 
@@ -40,8 +81,8 @@ export async function registerRoutes(
     }
   });
 
-  // Get all mechanics (for manager dashboard)
-  app.get("/api/mechanics", async (req, res) => {
+  // Get all mechanics (for manager dashboard) - PROTECTED
+  app.get("/api/mechanics", requireManagerAuth, async (req, res) => {
     try {
       const mechanics = await storage.getMechanics();
       res.json(mechanics);
@@ -50,8 +91,8 @@ export async function registerRoutes(
     }
   });
 
-  // Create mechanic
-  app.post("/api/mechanics", async (req, res) => {
+  // Create mechanic - PROTECTED
+  app.post("/api/mechanics", requireManagerAuth, async (req, res) => {
     try {
       const validatedData = insertMechanicSchema.parse(req.body);
       const mechanic = await storage.createMechanic(validatedData);
@@ -64,22 +105,26 @@ export async function registerRoutes(
     }
   });
 
-  // Update mechanic
-  app.patch("/api/mechanics/:id", async (req, res) => {
+  // Update mechanic - PROTECTED with validation
+  app.patch("/api/mechanics/:id", requireManagerAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      const mechanic = await storage.updateMechanic(id, req.body);
+      const validatedData = updateMechanicSchema.parse(req.body);
+      const mechanic = await storage.updateMechanic(id, validatedData);
       if (!mechanic) {
         return res.status(404).json({ error: "Mechanic not found" });
       }
       res.json(mechanic);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
       res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  // Delete mechanic
-  app.delete("/api/mechanics/:id", async (req, res) => {
+  // Delete mechanic - PROTECTED
+  app.delete("/api/mechanics/:id", requireManagerAuth, async (req, res) => {
     try {
       const { id } = req.params;
       await storage.deleteMechanic(id);
@@ -89,8 +134,8 @@ export async function registerRoutes(
     }
   });
 
-  // Get all appointments
-  app.get("/api/appointments", async (req, res) => {
+  // Get all appointments - PROTECTED
+  app.get("/api/appointments", requireManagerAuth, async (req, res) => {
     try {
       const appointments = await storage.getAppointments();
       res.json(appointments);
@@ -129,19 +174,27 @@ export async function registerRoutes(
     }
   });
 
-  // Update appointment status
-  app.patch("/api/appointments/:id/status", async (req, res) => {
+  // Update appointment status - PROTECTED
+  app.patch("/api/appointments/:id/status", requireManagerAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
       
-      const appointment = await storage.updateAppointmentStatus(id, status);
+      const statusSchema = z.object({ 
+        status: z.enum(['scheduled', 'in-progress', 'completed']) 
+      });
+      const validated = statusSchema.parse({ status });
+      
+      const appointment = await storage.updateAppointmentStatus(id, validated.status);
       if (!appointment) {
         return res.status(404).json({ error: "Appointment not found" });
       }
       
       res.json(appointment);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
       res.status(500).json({ error: "Internal server error" });
     }
   });

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Wrench, Calendar, User, Menu, X } from "lucide-react";
+import { Wrench, Calendar, Menu } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -42,7 +42,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <nav className="hidden md:flex items-center gap-2">
             <NavLink href="/" icon={Wrench}>Services</NavLink>
             <NavLink href="/booking" icon={Calendar}>Book Now</NavLink>
-            <NavLink href="/mechanic" icon={User}>Mechanic Login</NavLink>
           </nav>
 
           {/* Mobile Nav */}
@@ -57,7 +56,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <nav className="flex flex-col gap-4 mt-8">
                   <NavLink href="/" icon={Wrench}>Services</NavLink>
                   <NavLink href="/booking" icon={Calendar}>Book Now</NavLink>
-                  <NavLink href="/mechanic" icon={User}>Mechanic Login</NavLink>
                 </nav>
               </SheetContent>
             </Sheet>
@@ -91,6 +89,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <p className="text-white/70 text-sm">Utah County</p>
             <p className="text-white/70 text-sm">Orem, Provo, Lehi & Surrounds</p>
           </div>
+        </div>
+        <div className="container mx-auto px-4 mt-8 pt-6 border-t border-white/20 text-center">
+          <Link href="/manage">
+            <span className="text-white/40 text-xs hover:text-white/60 transition-colors cursor-pointer">
+              Manager Access
+            </span>
+          </Link>
         </div>
       </footer>
     </div>
