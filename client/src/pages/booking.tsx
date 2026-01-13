@@ -20,8 +20,11 @@ const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
-  address: z.string().min(5, "Address is required"),
-  licensePlate: z.string().min(2, "License plate is required"),
+  streetAddress: z.string().min(5, "Street address is required"),
+  city: z.string().min(2, "City is required"),
+  state: z.string().min(2, "State is required"),
+  zipCode: z.string().min(5, "Zip code is required"),
+  licensePlate: z.string().min(4, "License plate is required").max(8, "License plate too long"),
   vehicleYear: z.string().min(4, "Year is required"),
   vehicleMake: z.string().min(2, "Make is required"),
   vehicleModel: z.string().min(2, "Model is required"),
@@ -29,6 +32,12 @@ const formSchema = z.object({
   date: z.date({ required_error: "Please select a date" }),
   timeSlot: z.string().min(1, "Please select a time"),
 });
+
+function formatLicensePlate(value: string): string {
+  const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (cleaned.length <= 3) return cleaned;
+  return cleaned.slice(0, 3) + ' ' + cleaned.slice(3, 7);
+}
 
 const BASE_PRICE = 95;
 
@@ -52,7 +61,10 @@ export default function Booking() {
       name: "",
       email: "",
       phone: "",
-      address: "",
+      streetAddress: "",
+      city: "",
+      state: "UT",
+      zipCode: "",
       licensePlate: "",
       vehicleYear: "",
       vehicleMake: "",
@@ -65,6 +77,7 @@ export default function Booking() {
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
       const serviceType = getServiceDescription(data.isHighMileage);
+      const fullAddress = `${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}`;
       
       const response = await fetch('/api/appointments', {
         method: 'POST',
@@ -81,7 +94,7 @@ export default function Booking() {
           price: BASE_PRICE,
           date: format(data.date, 'yyyy-MM-dd'),
           timeSlot: data.timeSlot,
-          address: data.address,
+          address: fullAddress,
           status: 'scheduled',
           mechanicId: null,
         }),
@@ -116,7 +129,7 @@ export default function Booking() {
   const nextStep = async () => {
     let fieldsToValidate: any[] = [];
     if (step === 1) fieldsToValidate = ['licensePlate', 'vehicleYear', 'vehicleMake', 'vehicleModel'];
-    if (step === 2) fieldsToValidate = ['date', 'timeSlot', 'address'];
+    if (step === 2) fieldsToValidate = ['date', 'timeSlot', 'streetAddress', 'city', 'state', 'zipCode'];
     
     const result = await form.trigger(fieldsToValidate);
     if (result) setStep(step + 1);
@@ -164,7 +177,17 @@ export default function Booking() {
                         <FormItem>
                           <FormLabel>License Plate Number</FormLabel>
                           <FormControl>
-                            <Input placeholder="ABC 1234" className="text-lg uppercase" {...field} data-testid="input-license-plate" />
+                            <Input 
+                              placeholder="ABC 1234" 
+                              className="text-lg uppercase tracking-wider"
+                              maxLength={8}
+                              value={field.value}
+                              onChange={(e) => {
+                                const formatted = formatLicensePlate(e.target.value);
+                                field.onChange(formatted);
+                              }}
+                              data-testid="input-license-plate" 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -308,20 +331,62 @@ export default function Booking() {
 
                     <FormField
                       control={form.control}
-                      name="address"
+                      name="streetAddress"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Service Location Address</FormLabel>
+                          <FormLabel>Street Address</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Input className="pl-9" placeholder="1234 Main St, City, State" {...field} data-testid="input-address" />
+                              <Input className="pl-9" placeholder="1234 Main St" {...field} data-testid="input-street-address" />
                             </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+
+                    <div className="grid grid-cols-6 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="city"
+                        render={({ field }) => (
+                          <FormItem className="col-span-3">
+                            <FormLabel>City</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Orem" {...field} data-testid="input-city" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="state"
+                        render={({ field }) => (
+                          <FormItem className="col-span-1">
+                            <FormLabel>State</FormLabel>
+                            <FormControl>
+                              <Input placeholder="UT" maxLength={2} className="uppercase" {...field} data-testid="input-state" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="zipCode"
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel>Zip Code</FormLabel>
+                            <FormControl>
+                              <Input placeholder="84058" maxLength={5} {...field} data-testid="input-zip" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -378,7 +443,7 @@ export default function Booking() {
                       <p><span className="font-semibold">Vehicle:</span> {form.getValues('vehicleYear')} {form.getValues('vehicleMake')} {form.getValues('vehicleModel')}</p>
                       <p><span className="font-semibold">Service:</span> {getServiceDescription(form.getValues('isHighMileage'))}</p>
                       <p><span className="font-semibold">When:</span> {form.getValues('date') ? format(form.getValues('date'), 'PPP') : ''} at {form.getValues('timeSlot')}</p>
-                      <p><span className="font-semibold">Where:</span> {form.getValues('address')}</p>
+                      <p><span className="font-semibold">Where:</span> {form.getValues('streetAddress')}, {form.getValues('city')}, {form.getValues('state')} {form.getValues('zipCode')}</p>
                       <div className="border-t pt-2 mt-2">
                         <p className="text-lg font-bold">Total: <span className="text-primary">${BASE_PRICE}</span></p>
                       </div>
