@@ -52,8 +52,26 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Meet the Technicians Section */}
+      {mechanics.length > 0 && (
+        <section id="technicians" className="py-16 bg-background scroll-mt-20">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl md:text-4xl font-display font-bold text-center mb-4">
+              Meet Our Technicians
+            </h2>
+            <div className="w-24 h-1 bg-primary mx-auto mb-12"></div>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              {mechanics.map(mechanic => (
+                <MechanicCard key={mechanic.id} mechanic={mechanic} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* How It Works */}
-      <section className="py-20 bg-background">
+      <section id="service" className="py-20 bg-muted scroll-mt-20">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl md:text-4xl font-display font-bold text-center mb-4">
             Premium Oil Change Service
@@ -84,12 +102,12 @@ export default function Home() {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-16 bg-muted">
+      <section id="price" className="py-16 bg-background scroll-mt-20">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Price</h2>
           <div className="w-24 h-1 bg-primary mx-auto mb-8"></div>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-4">
-            Starting at <span className="text-primary font-bold text-3xl">$85</span> for most vehicles
+            Starting at <span className="text-primary font-bold text-3xl">$95</span> for most vehicles
           </p>
           <p className="text-muted-foreground max-w-xl mx-auto">
             Our service includes complimentary wiper fluid top-off and tire air pressure check.
@@ -101,24 +119,6 @@ export default function Home() {
           </Link>
         </div>
       </section>
-
-      {/* Meet the Mechanics Section */}
-      {mechanics.length > 0 && (
-        <section className="py-16 bg-background">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl md:text-4xl font-display font-bold text-center mb-4">
-              Meet Our Mechanics
-            </h2>
-            <div className="w-24 h-1 bg-primary mx-auto mb-12"></div>
-            
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              {mechanics.map(mechanic => (
-                <MechanicCard key={mechanic.id} mechanic={mechanic} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Referral Section */}
       <section className="py-16 bg-primary text-white">

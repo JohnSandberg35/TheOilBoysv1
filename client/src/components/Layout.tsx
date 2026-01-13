@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Wrench, Calendar, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -9,23 +9,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
 
-  const NavLink = ({ href, children, icon: Icon }: { href: string; children: React.ReactNode; icon: any }) => {
-    const isActive = location === href;
-    return (
-      <Link href={href}>
-        <div 
-          className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors cursor-pointer ${
-            isActive 
-              ? "bg-primary text-primary-foreground font-bold" 
-              : "text-foreground hover:bg-muted"
-          }`}
-          onClick={() => setIsOpen(false)}
-        >
-          <Icon className="w-4 h-4" />
-          <span className="uppercase tracking-wide text-sm">{children}</span>
-        </div>
-      </Link>
-    );
+  const scrollToSection = (sectionId: string) => {
+    if (location !== "/") {
+      window.location.href = `/#${sectionId}`;
+    } else {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+    setIsOpen(false);
   };
 
   return (
@@ -39,9 +32,36 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-2">
-            <NavLink href="/" icon={Wrench}>Services</NavLink>
-            <NavLink href="/booking" icon={Calendar}>Book Now</NavLink>
+          <nav className="hidden md:flex items-center gap-3">
+            <Link href="/booking">
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold uppercase tracking-wide text-sm" data-testid="nav-book-now">
+                Book Now
+              </Button>
+            </Link>
+            <Button 
+              variant="outline" 
+              className="border-primary text-primary hover:bg-primary hover:text-primary-foreground font-bold uppercase tracking-wide text-sm"
+              onClick={() => scrollToSection("technicians")}
+              data-testid="nav-technicians"
+            >
+              Technicians
+            </Button>
+            <Button 
+              variant="outline" 
+              className="border-primary text-primary hover:bg-primary hover:text-primary-foreground font-bold uppercase tracking-wide text-sm"
+              onClick={() => scrollToSection("service")}
+              data-testid="nav-service"
+            >
+              Service
+            </Button>
+            <Button 
+              variant="outline" 
+              className="border-primary text-primary hover:bg-primary hover:text-primary-foreground font-bold uppercase tracking-wide text-sm"
+              onClick={() => scrollToSection("price")}
+              data-testid="nav-price"
+            >
+              Price
+            </Button>
           </nav>
 
           {/* Mobile Nav */}
@@ -54,8 +74,32 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                 <nav className="flex flex-col gap-4 mt-8">
-                  <NavLink href="/" icon={Wrench}>Services</NavLink>
-                  <NavLink href="/booking" icon={Calendar}>Book Now</NavLink>
+                  <Link href="/booking">
+                    <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold uppercase tracking-wide" onClick={() => setIsOpen(false)}>
+                      Book Now
+                    </Button>
+                  </Link>
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground font-bold uppercase tracking-wide"
+                    onClick={() => scrollToSection("technicians")}
+                  >
+                    Technicians
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground font-bold uppercase tracking-wide"
+                    onClick={() => scrollToSection("service")}
+                  >
+                    Service
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground font-bold uppercase tracking-wide"
+                    onClick={() => scrollToSection("price")}
+                  >
+                    Price
+                  </Button>
                 </nav>
               </SheetContent>
             </Sheet>

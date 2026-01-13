@@ -59,7 +59,7 @@ shared/
 - Business: The Oil Boys LLC
 - Service area: Utah County (Orem, Provo, Lehi and surrounds)
 - Contact: (385) 269-1482, theoilboysllc@gmail.com
-- Pricing: $85 Full Synthetic, +$15 high mileage (75k+ miles)
+- Pricing: $95 Full Synthetic, +$15 high mileage (75k+ miles)
 - Design: Black (#000) and White (#fff) color scheme, classic automotive aesthetic
 - Referral program: 20% off next oil change
 
