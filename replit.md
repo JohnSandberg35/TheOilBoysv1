@@ -14,12 +14,12 @@ A comprehensive web application for "The Oil Boys," a mobile oil change business
 - Job completion triggers email notification to customer
 
 ## Recent Changes
-- **2026-01-14**: Added technician portal at /technician with weekly availability scheduler
-- **2026-01-14**: Mechanics can now view assigned jobs and mark them complete
+- **2026-01-14**: Unified team portal at /manage - both managers and technicians login from same page
+- **2026-01-14**: Technicians see availability scheduler and job management after login
 - **2026-01-14**: Job completion sends email notification to customer via Resend
 - **2026-01-14**: Added mechanic_availability table for scheduling
 - **2026-01-14**: Two-tier authentication: managers (full access) and mechanics (limited portal)
-- **2026-01-14**: Test mechanic credentials: jake@oilboys.com / mechanic123
+- **2026-01-14**: Test credentials: Manager (truman@oilboys.com / admin), Technician (jake@oilboys.com / mechanic123)
 - **2026-01-13**: Added server-side session authentication with password hashing
 - **2026-01-13**: Protected all admin API routes with auth middleware
 - **2026-01-13**: Added "Meet Our Mechanics" section to homepage
