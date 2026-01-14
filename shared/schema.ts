@@ -16,6 +16,8 @@ export type Manager = typeof managers.$inferSelect;
 
 export const mechanics = pgTable("mechanics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").unique(),
+  password: text("password"),
   name: text("name").notNull(),
   phone: text("phone"),
   photoUrl: text("photo_url"),
@@ -28,6 +30,18 @@ export const mechanics = pgTable("mechanics", {
 export const insertMechanicSchema = createInsertSchema(mechanics).omit({ id: true });
 export type InsertMechanic = z.infer<typeof insertMechanicSchema>;
 export type Mechanic = typeof mechanics.$inferSelect;
+
+export const mechanicAvailability = pgTable("mechanic_availability", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mechanicId: varchar("mechanic_id").notNull().references(() => mechanics.id),
+  date: text("date").notNull(),
+  timeSlot: text("time_slot").notNull(),
+  isAvailable: boolean("is_available").notNull().default(true),
+});
+
+export const insertMechanicAvailabilitySchema = createInsertSchema(mechanicAvailability).omit({ id: true });
+export type InsertMechanicAvailability = z.infer<typeof insertMechanicAvailabilitySchema>;
+export type MechanicAvailability = typeof mechanicAvailability.$inferSelect;
 
 export const appointments = pgTable("appointments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

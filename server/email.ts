@@ -118,3 +118,72 @@ export async function sendBookingConfirmation(data: BookingEmailData) {
     return { success: false, error };
   }
 }
+
+interface CompletionEmailData {
+  customerName: string;
+  customerEmail: string;
+  vehicleYear: string;
+  vehicleMake: string;
+  vehicleModel: string;
+  serviceType: string;
+  mechanicName?: string;
+}
+
+export async function sendCompletionEmail(data: CompletionEmailData) {
+  const completionEmailHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: #1a1a1a; padding: 30px; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">THE OIL BOYS</h1>
+        <p style="color: #cccccc; margin: 5px 0 0 0;">Mobile Oil Change Service | Est. 2024</p>
+      </div>
+      
+      <div style="padding: 30px; background: #f8f8f8;">
+        <h2 style="color: #1a1a1a;">Service Completed!</h2>
+        <p>Hi ${data.customerName},</p>
+        <p>Great news! Your oil change service has been completed successfully.</p>
+        
+        <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <h3 style="color: #1a1a1a; margin-top: 0;">Service Summary</h3>
+          <p style="margin: 5px 0;"><strong>Vehicle:</strong> ${data.vehicleYear} ${data.vehicleMake} ${data.vehicleModel}</p>
+          <p style="margin: 5px 0;"><strong>Service:</strong> ${data.serviceType}</p>
+          ${data.mechanicName ? `<p style="margin: 5px 0;"><strong>Technician:</strong> ${data.mechanicName}</p>` : ''}
+        </div>
+        
+        <div style="background: #1a1a1a; color: white; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+          <h3 style="margin-top: 0;">Refer a Friend!</h3>
+          <p>Get 20% off your next oil change when you refer a friend.</p>
+        </div>
+        
+        <p style="color: #666666; font-size: 0.9em;">
+          Thank you for choosing The Oil Boys! We appreciate your business.
+        </p>
+        
+        <p style="color: #666666; font-size: 0.9em;">
+          Questions or feedback? Contact us at (385) 269-1482 or reply to this email.
+        </p>
+      </div>
+      
+      <div style="background: #1a1a1a; padding: 20px; text-align: center;">
+        <p style="color: #999999; margin: 0; font-size: 0.8em;">
+          The Oil Boys LLC | Utah County, UT<br>
+          (385) 269-1482 | theoilboysllc@gmail.com
+        </p>
+      </div>
+    </div>
+  `;
+
+  try {
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      subject: `Service Completed - ${data.vehicleYear} ${data.vehicleMake} ${data.vehicleModel}`,
+      html: completionEmailHtml,
+    });
+
+    console.log('Completion email sent:', result);
+    return { success: true, result };
+  } catch (error) {
+    console.error('Failed to send completion email:', error);
+    return { success: false, error };
+  }
+}

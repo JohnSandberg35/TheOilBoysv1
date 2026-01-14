@@ -21,6 +21,9 @@ declare module "express-session" {
     managerId?: string;
     managerEmail?: string;
     managerName?: string;
+    mechanicId?: string;
+    mechanicEmail?: string;
+    mechanicName?: string;
   }
 }
 
