@@ -131,7 +131,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div>
             <h4 className="font-display text-lg mb-4">Service Areas</h4>
             <p className="text-white/70 text-sm">Utah County</p>
-            <p className="text-white/70 text-sm">Orem, Provo, Lehi & Surrounds</p>
           </div>
         </div>
         <div className="container mx-auto px-4 mt-8 pt-6 border-t border-white/20 text-center">

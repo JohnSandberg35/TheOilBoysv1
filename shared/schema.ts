@@ -52,11 +52,14 @@ export const appointments = pgTable("appointments", {
   vehicleYear: text("vehicle_year").notNull(),
   vehicleMake: text("vehicle_make").notNull(),
   vehicleModel: text("vehicle_model").notNull(),
+  vehicleType: text("vehicle_type"),
   serviceType: text("service_type").notNull(),
   price: integer("price").notNull(),
   date: text("date").notNull(),
   timeSlot: text("time_slot").notNull(),
   address: text("address").notNull(),
+  preferredContactMethod: text("preferred_contact_method"),
+  willBeHome: text("will_be_home"),
   status: text("status").notNull().default("scheduled"),
   mechanicId: varchar("mechanic_id").references(() => mechanics.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -68,3 +71,14 @@ export const insertAppointmentSchema = createInsertSchema(appointments).omit({
 });
 export type InsertAppointment = z.infer<typeof insertAppointmentSchema>;
 export type Appointment = typeof appointments.$inferSelect;
+
+export const mechanicTimeEntries = pgTable("mechanic_time_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mechanicId: varchar("mechanic_id").notNull().references(() => mechanics.id),
+  checkInTime: timestamp("check_in_time").notNull().defaultNow(),
+  checkOutTime: timestamp("check_out_time"),
+});
+
+export const insertMechanicTimeEntrySchema = createInsertSchema(mechanicTimeEntries).omit({ id: true });
+export type InsertMechanicTimeEntry = z.infer<typeof insertMechanicTimeEntrySchema>;
+export type MechanicTimeEntry = typeof mechanicTimeEntries.$inferSelect;

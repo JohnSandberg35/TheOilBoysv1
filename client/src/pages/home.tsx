@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Truck, Car, Phone, Mail, Facebook, Instagram, Twitter, Shield, User, Wrench } from "lucide-react";
 import { Link } from "wouter";
 import heroImage from "@assets/stock_images/classic_muscle_car_b_0af1eeeb.jpg";
+import logoImage from "@/assets/logo.png";
 import { useQuery } from "@tanstack/react-query";
 
 type Mechanic = {
@@ -123,6 +124,9 @@ export default function Home() {
       {/* Referral Section */}
       <section className="py-16 bg-primary text-white">
         <div className="container mx-auto px-4 text-center">
+          <div className="flex justify-center mb-6">
+            <img src={logoImage} alt="The Oil Boys Logo" className="h-24 md:h-32 w-auto object-contain" />
+          </div>
           <h2 className="text-2xl md:text-3xl font-display font-bold mb-4">
             Share to Save Big!
           </h2>

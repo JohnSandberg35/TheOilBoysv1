@@ -174,6 +174,26 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/mechanic/availability/batch", requireMechanicAuth, async (req, res) => {
+    try {
+      const mechanicId = req.session.mechanicId!;
+      const availabilities = req.body.availabilities;
+      if (!Array.isArray(availabilities)) {
+        return res.status(400).json({ error: "availabilities must be an array" });
+      }
+      const validatedData = availabilities.map((a: any) => 
+        insertMechanicAvailabilitySchema.parse({ ...a, mechanicId })
+      );
+      const results = await storage.setMechanicAvailabilityBatch(validatedData);
+      res.status(201).json(results);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   app.delete("/api/mechanic/availability", requireMechanicAuth, async (req, res) => {
     try {
       const mechanicId = req.session.mechanicId!;
@@ -230,12 +250,142 @@ export async function registerRoutes(
     }
   });
 
-  // Public endpoint to get available time slots for a date
+  // Public endpoint to get available time slots for a date with mechanics
   app.get("/api/availability/:date", async (req, res) => {
     try {
       const { date } = req.params;
-      const slots = await storage.getAvailableSlots(date);
-      res.json(slots);
+      const slotsWithMechanics = await storage.getAvailableSlotsWithMechanics(date);
+      
+      // Format response to only include id and name for mechanics
+      const result = slotsWithMechanics.map(slot => ({
+        timeSlot: slot.timeSlot,
+        mechanics: slot.mechanics.map(m => ({
+          id: m.id,
+          name: m.name
+        }))
+      }));
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching availability:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get available mechanics for a specific date and time slot
+  app.get("/api/availability/:date/:timeSlot/mechanics", async (req, res) => {
+    try {
+      const { date, timeSlot } = req.params;
+      const mechanics = await storage.getAvailableMechanicsForSlot(date, decodeURIComponent(timeSlot));
+      res.json(mechanics.map(m => ({ id: m.id, name: m.name })));
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Time tracking routes
+  app.get("/api/mechanic/time-entry/current", requireMechanicAuth, async (req, res) => {
+    try {
+      const mechanicId = req.session.mechanicId!;
+      const entry = await storage.getCurrentTimeEntry(mechanicId);
+      res.json(entry || null);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/mechanic/time-entry/check-in", requireMechanicAuth, async (req, res) => {
+    try {
+      const mechanicId = req.session.mechanicId!;
+      // Check if there's an active time entry
+      const existing = await storage.getCurrentTimeEntry(mechanicId);
+      if (existing) {
+        return res.status(400).json({ error: "Already checked in" });
+      }
+      const entry = await storage.createTimeEntry({ mechanicId, checkInTime: new Date() });
+      res.status(201).json(entry);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/mechanic/time-entry/check-out", requireMechanicAuth, async (req, res) => {
+    try {
+      const mechanicId = req.session.mechanicId!;
+      const entry = await storage.getCurrentTimeEntry(mechanicId);
+      if (!entry) {
+        return res.status(400).json({ error: "Not checked in" });
+      }
+      const updated = await storage.updateTimeEntryCheckOut(entry.id);
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get time entries for a mechanic (weekly view)
+  app.get("/api/mechanic/time-entries", requireMechanicAuth, async (req, res) => {
+    try {
+      const mechanicId = req.session.mechanicId!;
+      const weekStart = req.query.weekStart as string | undefined;
+      
+      let startDate: Date | undefined;
+      let endDate: Date | undefined;
+      
+      if (weekStart) {
+        startDate = new Date(weekStart);
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 7);
+      }
+      
+      const entries = await storage.getTimeEntriesByMechanic(mechanicId, startDate, endDate);
+      res.json(entries);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get weekly hours for a mechanic
+  app.get("/api/mechanic/weekly-hours", requireMechanicAuth, async (req, res) => {
+    try {
+      const mechanicId = req.session.mechanicId!;
+      const weekStart = req.query.weekStart as string;
+      if (!weekStart) {
+        return res.status(400).json({ error: "weekStart parameter required" });
+      }
+      const hours = await storage.getMechanicWeeklyHours(mechanicId, new Date(weekStart));
+      res.json({ hours });
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get all employees' current clock status (manager only)
+  app.get("/api/manager/employee-time-tracking", requireManagerAuth, async (req, res) => {
+    try {
+      const currentEntries = await storage.getAllCurrentTimeEntries();
+      
+      // Get all mechanics with their weekly hours
+      const mechanics = await storage.getMechanics();
+      const weekStart = req.query.weekStart as string | undefined;
+      
+      const employees = await Promise.all(mechanics.map(async (mechanic) => {
+        const currentEntry = currentEntries.find(e => e.mechanicId === mechanic.id);
+        let weeklyHours = 0;
+        
+        if (weekStart) {
+          weeklyHours = await storage.getMechanicWeeklyHours(mechanic.id, new Date(weekStart));
+        }
+        
+        return {
+          ...mechanic,
+          isClockedIn: !!currentEntry,
+          currentCheckInTime: currentEntry?.checkInTime || null,
+          weeklyHours,
+        };
+      }));
+      
+      res.json(employees);
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
     }
