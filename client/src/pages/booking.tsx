@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { PaymentForm } from "@/components/PaymentForm";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -25,13 +26,13 @@ const formSchema = z.object({
   state: z.string().min(2, "State is required"),
   zipCode: z.string().min(5, "Zip code is required"),
   licensePlate: z.string().min(4, "License plate is required").max(8, "License plate too long"),
+  licensePlateState: z.string().min(2, "License plate state is required").max(2, "State must be 2 letters"),
   vehicleYear: z.string().min(4, "Year is required"),
   vehicleMake: z.string().min(2, "Make is required"),
   vehicleModel: z.string().min(2, "Model is required"),
   vehicleType: z.enum(["sedan-compact", "suv-truck"], { required_error: "Please select vehicle type" }),
   isHighMileage: z.boolean(),
   preferredContactMethod: z.enum(["phone-text", "phone-call", "email"], { required_error: "Please select preferred contact method" }),
-  willBeHome: z.enum(["yes", "no"], { required_error: "Please select an option" }),
   date: z.date({ required_error: "Please select a date" }),
   timeSlot: z.string().min(1, "Please select a time"),
   mechanicId: z.string().optional(),
@@ -43,15 +44,19 @@ function formatLicensePlate(value: string): string {
   return cleaned.slice(0, 3) + ' ' + cleaned.slice(3, 7);
 }
 
-const BASE_PRICE = 95;
+function getPrice(vehicleType: "sedan-compact" | "suv-truck" | undefined): number {
+  if (!vehicleType) return 95; // Default to small car price
+  return vehicleType === "sedan-compact" ? 95 : 105;
+}
 
 function getServiceDescription(isHighMileage: boolean): string {
   return isHighMileage ? "Full Synthetic (High Mileage)" : "Full Synthetic";
 }
 
 const ALL_TIME_SLOTS = [
-  "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM", 
-  "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM"
+  "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
+  "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM",
+  "06:00 PM", "07:00 PM", "08:00 PM"
 ];
 
 // Helper function to normalize time slot format (convert "8:00 AM" to "08:00 AM")
@@ -75,6 +80,7 @@ export default function Booking() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [step, setStep] = useState(1);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -87,13 +93,13 @@ export default function Booking() {
       state: "UT",
       zipCode: "",
       licensePlate: "",
+      licensePlateState: "UT",
       vehicleYear: "",
       vehicleMake: "",
       vehicleModel: "",
       vehicleType: undefined,
       isHighMileage: false,
       preferredContactMethod: undefined,
-      willBeHome: undefined,
       timeSlot: "",
       mechanicId: undefined,
     },
@@ -135,69 +141,43 @@ export default function Booking() {
   const selectedSlotData = availableSlotsData.find(s => normalizeTimeSlot(s.timeSlot) === selectedTimeSlot);
   const availableMechanics = selectedSlotData?.mechanics || [];
 
-  const createAppointmentMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof formSchema>) => {
-      const serviceType = getServiceDescription(data.isHighMileage);
-      const fullAddress = `${data.streetAddress}, ${data.city}, ${data.state} ${data.zipCode}`;
-      
-      const response = await fetch('/api/appointments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerName: data.name,
-          customerEmail: data.email,
-          customerPhone: data.phone,
-          licensePlate: data.licensePlate,
-          vehicleYear: data.vehicleYear,
-          vehicleMake: data.vehicleMake,
-          vehicleModel: data.vehicleModel,
-          vehicleType: data.vehicleType,
-          serviceType,
-          price: BASE_PRICE,
-          date: format(data.date, 'yyyy-MM-dd'),
-          timeSlot: data.timeSlot,
-          address: fullAddress,
-          preferredContactMethod: data.preferredContactMethod,
-          willBeHome: data.willBeHome,
-          status: 'scheduled',
-          mechanicId: data.mechanicId && data.mechanicId !== 'any' ? data.mechanicId : null,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create appointment');
-      }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Appointment Confirmed!",
-        description: "We've sent a confirmation to your email.",
-      });
-      setTimeout(() => setLocation("/"), 2000);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to create appointment. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
   function onSubmit(values: z.infer<typeof formSchema>) {
-    createAppointmentMutation.mutate(values);
+    // Form submission is handled by payment step
+    // This is just to prevent default form submission
+  }
+
+  function handlePaymentSuccess(appointment: any) {
+    console.log('✅ Payment success handler called with appointment:', appointment);
+    setPaymentCompleted(true);
+    toast({
+      title: "Payment Successful!",
+      description: "Your appointment has been confirmed. We've sent a confirmation email.",
+    });
+    setTimeout(() => {
+      console.log('🔄 Redirecting to home page...');
+      setLocation("/");
+    }, 2000);
+  }
+
+  function handlePaymentError(error: string) {
+    console.error('❌ Payment error handler called:', error);
+    toast({
+      title: "Payment Failed",
+      description: error || "Please try again or contact us for assistance.",
+      variant: "destructive",
+    });
   }
 
   const nextStep = async () => {
     let fieldsToValidate: any[] = [];
     if (step === 1) fieldsToValidate = ['licensePlate', 'vehicleYear', 'vehicleMake', 'vehicleModel', 'vehicleType'];
     if (step === 2) fieldsToValidate = ['date', 'timeSlot', 'streetAddress', 'city', 'state', 'zipCode'];
-    if (step === 3) fieldsToValidate = ['name', 'email', 'phone', 'preferredContactMethod', 'willBeHome'];
+    if (step === 3) fieldsToValidate = ['name', 'email', 'phone', 'preferredContactMethod'];
     
     const result = await form.trigger(fieldsToValidate);
-    if (result) setStep(step + 1);
+    if (result && step < 4) {
+      setStep(step + 1);
+    }
   };
 
   const prevStep = () => setStep(step - 1);
@@ -235,29 +215,53 @@ export default function Booking() {
                 {/* Step 1: Vehicle & Service */}
                 {step === 1 && (
                   <div className="space-y-6 animate-in slide-in-from-right duration-300">
-                    <FormField
-                      control={form.control}
-                      name="licensePlate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>License Plate Number</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="ABC 1234" 
-                              className="text-base md:text-lg uppercase tracking-wider min-h-[44px]"
-                              maxLength={8}
-                              value={field.value}
-                              onChange={(e) => {
-                                const formatted = formatLicensePlate(e.target.value);
-                                field.onChange(formatted);
-                              }}
-                              data-testid="input-license-plate" 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="licensePlate"
+                        render={({ field }) => (
+                          <FormItem className="sm:col-span-3">
+                            <FormLabel>License Plate Number</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="ABC 1234" 
+                                className="text-base md:text-lg uppercase tracking-wider min-h-[44px]"
+                                maxLength={8}
+                                value={field.value}
+                                onChange={(e) => {
+                                  const formatted = formatLicensePlate(e.target.value);
+                                  field.onChange(formatted);
+                                }}
+                                data-testid="input-license-plate" 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="licensePlateState"
+                        render={({ field }) => (
+                          <FormItem className="sm:col-span-1">
+                            <FormLabel>State</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="UT" 
+                                maxLength={2}
+                                className="uppercase min-h-[44px] text-base"
+                                value={field.value}
+                                onChange={(e) => {
+                                  field.onChange(e.target.value.toUpperCase());
+                                }}
+                                data-testid="input-license-plate-state" 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <FormField
@@ -360,48 +364,47 @@ export default function Booking() {
                 {/* Step 2: Date, Time & Location */}
                 {step === 2 && (
                   <div className="space-y-5 md:space-y-6 animate-in slide-in-from-right duration-300">
-                    <div className="grid md:grid-cols-2 gap-5 md:gap-6">
-                      <FormField
-                        control={form.control}
-                        name="date"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel className="text-base">Preferred Date</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant={"outline"}
-                                    className={`w-full pl-3 text-left font-normal min-h-[44px] text-base ${!field.value && "text-muted-foreground"}`}
-                                    data-testid="button-date"
-                                  >
-                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                    <CalendarIcon className="ml-auto h-5 w-5 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start" sideOffset={5}>
-                                <Calendar
-                                  mode="single"
-                                  selected={field.value}
-                                  onSelect={field.onChange}
-                                  disabled={(date) =>
-                                    date < new Date() || date < new Date("1900-01-01")
-                                  }
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    <FormField
+                      control={form.control}
+                      name="date"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel className="text-base">Preferred Date</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant={"outline"}
+                                  className={`w-full pl-3 text-left font-normal min-h-[44px] text-base ${!field.value && "text-muted-foreground"}`}
+                                  data-testid="button-date"
+                                >
+                                  {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                  <CalendarIcon className="ml-auto h-5 w-5 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start" sideOffset={5}>
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) =>
+                                  date < new Date() || date < new Date("1900-01-01")
+                                }
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                      <FormField
-                        control={form.control}
-                        name="timeSlot"
-                        render={({ field }) => (
-                          <FormItem className="md:col-span-2">
+                    <FormField
+                      control={form.control}
+                      name="timeSlot"
+                      render={({ field }) => (
+                        <FormItem>
                             <FormLabel className="text-base">Preferred Time & Technician</FormLabel>
                             {!selectedDate ? (
                               <div className="text-sm text-muted-foreground p-4 border rounded-lg bg-muted/50">
@@ -456,7 +459,6 @@ export default function Booking() {
                           </FormItem>
                         )}
                       />
-                    </div>
 
                     {selectedTimeSlot && availableMechanics.length > 0 && (
                       <FormField
@@ -621,28 +623,6 @@ export default function Booking() {
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="willBeHome"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Will you be home while we service the vehicle?</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-will-be-home" className="min-h-[44px] text-base">
-                                <SelectValue placeholder="Select an option" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="yes">Yes! I'll be home.</SelectItem>
-                              <SelectItem value="no">No (We'll reach out shortly with instructions)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
                     <div className="bg-muted/50 p-4 rounded-lg space-y-2 text-sm">
                       <h4 className="font-bold flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-primary" />
@@ -653,32 +633,70 @@ export default function Booking() {
                       <p><span className="font-semibold">When:</span> {form.getValues('date') ? format(form.getValues('date'), 'PPP') : ''} at {form.getValues('timeSlot')}</p>
                       <p><span className="font-semibold">Where:</span> {form.getValues('streetAddress')}, {form.getValues('city')}, {form.getValues('state')} {form.getValues('zipCode')}</p>
                       <div className="border-t pt-2 mt-2">
-                        <p className="text-lg font-bold">Total: <span className="text-primary">${BASE_PRICE}</span></p>
+                        <p className="text-lg font-bold">Total: <span className="text-primary">${getPrice(form.getValues('vehicleType'))}</span></p>
                       </div>
                     </div>
                   </div>
+                  )}
+
+                {/* Step 4: Payment */}
+                {step === 4 && (
+                  <div className="space-y-6 animate-in slide-in-from-right duration-300">
+                    <div className="bg-muted/50 p-4 rounded-lg space-y-2 text-sm mb-6">
+                      <h4 className="font-bold flex items-center gap-2 mb-3">
+                        <CheckCircle2 className="w-4 h-4 text-primary" />
+                        Appointment Summary
+                      </h4>
+                      <p><span className="font-semibold">Vehicle:</span> {form.getValues('vehicleYear')} {form.getValues('vehicleMake')} {form.getValues('vehicleModel')}</p>
+                      <p><span className="font-semibold">Service:</span> {getServiceDescription(form.getValues('isHighMileage'))}</p>
+                      <p><span className="font-semibold">When:</span> {form.getValues('date') ? format(form.getValues('date'), 'PPP') : ''} at {form.getValues('timeSlot')}</p>
+                      <p><span className="font-semibold">Where:</span> {form.getValues('streetAddress')}, {form.getValues('city')}, {form.getValues('state')} {form.getValues('zipCode')}</p>
+                      <div className="border-t pt-2 mt-2">
+                        <p className="text-lg font-bold">Total: <span className="text-primary">${getPrice(form.getValues('vehicleType'))}</span></p>
+                      </div>
+                    </div>
+
+                    <PaymentForm
+                      amount={getPrice(form.getValues('vehicleType'))}
+                      appointmentData={{
+                        customerName: form.getValues('name'),
+                        customerEmail: form.getValues('email'),
+                        customerPhone: form.getValues('phone'),
+                        licensePlate: form.getValues('licensePlate'),
+                        licensePlateState: form.getValues('licensePlateState'),
+                        vehicleYear: form.getValues('vehicleYear'),
+                        vehicleMake: form.getValues('vehicleMake'),
+                        vehicleModel: form.getValues('vehicleModel'),
+                        vehicleType: form.getValues('vehicleType'),
+                        serviceType: getServiceDescription(form.getValues('isHighMileage')),
+                        price: getPrice(form.getValues('vehicleType')),
+                        date: form.getValues('date') ? format(form.getValues('date'), 'yyyy-MM-dd') : '',
+                        timeSlot: form.getValues('timeSlot'),
+                        address: `${form.getValues('streetAddress')}, ${form.getValues('city')}, ${form.getValues('state')} ${form.getValues('zipCode')}`,
+                        preferredContactMethod: form.getValues('preferredContactMethod'),
+                        willBeHome: 'yes',
+                        status: 'scheduled',
+                        mechanicId: form.getValues('mechanicId') && form.getValues('mechanicId') !== 'any' ? form.getValues('mechanicId') : null,
+                      }}
+                      onSuccess={handlePaymentSuccess}
+                      onError={handlePaymentError}
+                    />
+                  </div>
                 )}
 
-                <div className="flex justify-between pt-4 border-t gap-3">
-                  {step > 1 ? (
-                    <Button type="button" variant="outline" onClick={prevStep} className="min-h-[44px] flex-1 sm:flex-none">Back</Button>
-                  ) : (
-                    <div></div>
-                  )}
-                  
-                  {step < 3 ? (
-                    <Button type="button" onClick={nextStep} className="bg-primary text-primary-foreground hover:bg-primary/90 min-h-[44px] flex-1 sm:flex-none" data-testid="button-next">Next Step</Button>
-                  ) : (
-                    <Button 
-                      type="submit" 
-                      className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold px-8 min-h-[44px] flex-1 sm:flex-none"
-                      disabled={createAppointmentMutation.isPending}
-                      data-testid="button-confirm"
-                    >
-                      {createAppointmentMutation.isPending ? "Booking..." : "Confirm Booking"}
+                {step < 4 && (
+                  <div className="flex justify-between pt-4 border-t gap-3">
+                    {step > 1 ? (
+                      <Button type="button" variant="outline" onClick={prevStep} className="min-h-[44px] flex-1 sm:flex-none">Back</Button>
+                    ) : (
+                      <div></div>
+                    )}
+                    
+                    <Button type="button" onClick={nextStep} className="bg-primary text-primary-foreground hover:bg-primary/90 min-h-[44px] flex-1 sm:flex-none" data-testid="button-next">
+                      {step === 3 ? "Continue to Payment" : "Next Step"}
                     </Button>
-                  )}
-                </div>
+                  </div>
+                )}
               </form>
             </Form>
           </CardContent>

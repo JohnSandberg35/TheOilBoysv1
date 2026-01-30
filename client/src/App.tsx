@@ -8,6 +8,8 @@ import { Layout } from "@/components/Layout";
 import Home from "@/pages/home";
 import Booking from "@/pages/booking";
 import ManagerPage from "@/pages/manager";
+import FAQ from "@/pages/faq";
+import CancelAppointment from "@/pages/cancel";
 
 function Router() {
   return (
@@ -15,6 +17,8 @@ function Router() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/booking" component={Booking} />
+        <Route path="/faq" component={FAQ} />
+        <Route path="/cancel/:id" component={CancelAppointment} />
         <Route path="/manage" component={ManagerPage} />
         <Route path="/technician">{() => <Redirect to="/manage" />}</Route>
         <Route component={NotFound} />

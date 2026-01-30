@@ -41,7 +41,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    host: "0.0.0.0",
+    host: process.env.NODE_ENV === "production" ? "0.0.0.0" : "localhost",
     allowedHosts: true,
     fs: {
       strict: true,

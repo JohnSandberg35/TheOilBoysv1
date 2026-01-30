@@ -4,10 +4,21 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { MapPin, Calendar, Clock, Car, User, CheckCircle, Plus, Pencil, Trash2, Shield, Wrench, Loader2, LogOut, ChevronLeft, ChevronRight, Play, Square } from "lucide-react";
+import { MapPin, Calendar, Clock, Car, User, CheckCircle, Plus, Pencil, Trash2, Shield, Wrench, Loader2, LogOut, ChevronLeft, ChevronRight, Play, Square, Search, DollarSign, FileText, Phone, Mail, ImagePlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -23,25 +34,39 @@ type Availability = {
 
 const TIME_SLOTS = [
   "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
-  "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM"
+  "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM",
+  "6:00 PM", "7:00 PM", "8:00 PM"
 ];
 
 type Appointment = {
   id: string;
+  jobNumber?: number | null;
+  customerId?: string | null;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
   licensePlate: string | null;
+  licensePlateState?: string | null;
   vehicleYear: string;
   vehicleMake: string;
   vehicleModel: string;
+  vehicleType?: string | null;
+  vehicleNumber?: number | null;
   serviceType: string;
   price: number;
   date: string;
   timeSlot: string;
   address: string;
-  status: 'scheduled' | 'in-progress' | 'completed';
+  status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
   mechanicId: string | null;
+  dateBilled?: string | null;
+  dateReceived?: string | null;
+  isPaid?: boolean | null;
+  collector?: string | null;
+  paymentMethod?: string | null;
+  followUpDate?: string | null;
+  notes?: string | null;
+  createdAt?: string;
 };
 
 type Mechanic = {
@@ -67,6 +92,381 @@ type UserSession = {
   name: string;
   role: 'manager' | 'mechanic';
 };
+
+function CustomersTab() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
+  
+  const { data: customers = [], isLoading } = useQuery({
+    queryKey: ['customers'],
+    queryFn: async () => {
+      const response = await fetch('/api/customers');
+      if (!response.ok) throw new Error('Failed to fetch customers');
+      return response.json();
+    },
+  });
+
+  const { data: customerDetails } = useQuery({
+    queryKey: ['customer', selectedCustomer],
+    queryFn: async () => {
+      if (!selectedCustomer) return null;
+      const response = await fetch(`/api/customers/${selectedCustomer}`);
+      if (!response.ok) throw new Error('Failed to fetch customer details');
+      return response.json();
+    },
+    enabled: !!selectedCustomer,
+  });
+
+  const filteredCustomers = customers.filter((c: any) =>
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.phone.includes(searchTerm)
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 className="text-xl font-bold">Customers</h2>
+          <p className="text-sm text-muted-foreground">Manage customer relationships and view service history</p>
+        </div>
+        <div className="relative w-full md:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search customers..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <h3 className="font-semibold">Customer List ({filteredCustomers.length})</h3>
+          {isLoading ? (
+            <Card><CardContent className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></CardContent></Card>
+          ) : filteredCustomers.length === 0 ? (
+            <Card><CardContent className="py-8 text-center text-muted-foreground">No customers found</CardContent></Card>
+          ) : (
+            <div className="space-y-2 max-h-[600px] overflow-y-auto">
+              {filteredCustomers.map((customer: any) => (
+                <Card
+                  key={customer.id}
+                  className={`cursor-pointer transition-colors ${
+                    selectedCustomer === customer.id ? 'border-primary bg-primary/5' : ''
+                  }`}
+                  onClick={() => setSelectedCustomer(customer.id)}
+                >
+                  <CardContent className="p-4">
+                    <div className="font-semibold">{customer.name}</div>
+                    <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                      <Mail className="w-3 h-3" />
+                      {customer.email}
+                    </div>
+                    <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                      <Phone className="w-3 h-3" />
+                      {customer.phone}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="font-semibold">Customer Details</h3>
+          {selectedCustomer && customerDetails ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>{customerDetails.name}</CardTitle>
+                <CardDescription>
+                  <div className="space-y-1 mt-2">
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      {customerDetails.email}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4" />
+                      {customerDetails.phone}
+                    </div>
+                    {customerDetails.address && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        {customerDetails.address}
+                      </div>
+                    )}
+                  </div>
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {customerDetails.notes && (
+                  <div className="mb-4">
+                    <h4 className="font-semibold mb-2">Notes</h4>
+                    <p className="text-sm text-muted-foreground">{customerDetails.notes}</p>
+                  </div>
+                )}
+                <h4 className="font-semibold mb-2">Service History ({customerDetails.appointments?.length || 0})</h4>
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {customerDetails.appointments?.map((apt: any) => (
+                    <Card key={apt.id} className="p-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-medium">
+                            Job #{apt.jobNumber || 'N/A'} - {format(new Date(apt.date), 'MMM d, yyyy')}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {apt.vehicleYear} {apt.vehicleMake} {apt.vehicleModel}
+                            {apt.vehicleNumber && ` (Vehicle #${apt.vehicleNumber})`}
+                          </div>
+                          <div className="text-sm text-muted-foreground">${apt.price}</div>
+                        </div>
+                        <Badge variant={apt.status === 'completed' ? 'default' : 'secondary'}>
+                          {apt.status}
+                        </Badge>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Select a customer to view details
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function JobRecordsTab() {
+  const { data: appointments = [], isLoading } = useQuery({
+    queryKey: ['appointments'],
+    queryFn: async () => {
+      const response = await fetch('/api/appointments');
+      if (!response.ok) throw new Error('Failed to fetch appointments');
+      return response.json();
+    },
+  });
+
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const updatePaymentMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await fetch(`/api/appointments/${id}/payment`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to update payment');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      toast({ title: "Payment information updated" });
+    },
+  });
+
+  const updateNotesMutation = useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
+      const response = await fetch(`/api/appointments/${id}/notes`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes }),
+      });
+      if (!response.ok) throw new Error('Failed to update notes');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      toast({ title: "Notes updated" });
+    },
+  });
+
+  const completedJobs = appointments
+    .filter((a: any) => a.status === 'completed')
+    .sort((a: any, b: any) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return dateB - dateA;
+    });
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold">Job Records</h2>
+        <p className="text-sm text-muted-foreground">Track payments and manage completed jobs</p>
+      </div>
+
+      {isLoading ? (
+        <Card><CardContent className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></CardContent></Card>
+      ) : completedJobs.length === 0 ? (
+        <Card><CardContent className="py-8 text-center text-muted-foreground">No completed jobs yet</CardContent></Card>
+      ) : (
+        <div className="space-y-4">
+          {completedJobs.map((job: any) => (
+            <JobRecordCard
+              key={job.id}
+              job={job}
+              onUpdatePayment={(data) => updatePaymentMutation.mutate({ id: job.id, data })}
+              onUpdateNotes={(notes) => updateNotesMutation.mutate({ id: job.id, notes })}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function JobRecordCard({ job, onUpdatePayment, onUpdateNotes }: { job: any; onUpdatePayment: (data: any) => void; onUpdateNotes: (notes: string) => void }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [paymentData, setPaymentData] = useState({
+    dateBilled: job.dateBilled || '',
+    dateReceived: job.dateReceived || '',
+    isPaid: job.isPaid || false,
+    collector: job.collector || '',
+    paymentMethod: job.paymentMethod || '',
+  });
+  const [notes, setNotes] = useState(job.notes || '');
+
+  const handleSave = () => {
+    onUpdatePayment(paymentData);
+    onUpdateNotes(notes);
+    setIsEditing(false);
+  };
+
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <div className="font-bold text-lg">Job #{job.jobNumber || 'N/A'}</div>
+            <div className="text-sm text-muted-foreground">{job.customerName}</div>
+            <div className="text-sm text-muted-foreground">
+              {format(new Date(job.date), 'MMM d, yyyy')} at {job.timeSlot}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {job.vehicleYear} {job.vehicleMake} {job.vehicleModel}
+              {job.vehicleNumber && ` (Vehicle #${job.vehicleNumber})`}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-xl font-bold">${job.price}</div>
+            <Badge variant={paymentData.isPaid ? 'default' : 'secondary'} className="mt-2">
+              {paymentData.isPaid ? 'Paid' : 'Unpaid'}
+            </Badge>
+          </div>
+        </div>
+
+        {isEditing ? (
+          <div className="space-y-4 border-t pt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Date Billed</Label>
+                <Input
+                  type="date"
+                  value={paymentData.dateBilled}
+                  onChange={(e) => setPaymentData({ ...paymentData, dateBilled: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Date Received</Label>
+                <Input
+                  type="date"
+                  value={paymentData.dateReceived}
+                  onChange={(e) => setPaymentData({ ...paymentData, dateReceived: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Collector</Label>
+                <Input
+                  value={paymentData.collector}
+                  onChange={(e) => setPaymentData({ ...paymentData, collector: e.target.value })}
+                  placeholder="Who collected payment"
+                />
+              </div>
+              <div>
+                <Label>Payment Method</Label>
+                <Input
+                  value={paymentData.paymentMethod}
+                  onChange={(e) => setPaymentData({ ...paymentData, paymentMethod: e.target.value })}
+                  placeholder="Venmo, Cash, etc."
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={paymentData.isPaid}
+                onCheckedChange={(checked) => setPaymentData({ ...paymentData, isPaid: checked })}
+              />
+              <Label>Paid</Label>
+            </div>
+            <div>
+              <Label>Notes</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Job notes, customer preferences, issues, etc."
+                rows={3}
+              />
+            </div>
+            {job.followUpDate && (
+              <div className="text-sm text-muted-foreground">
+                Next change due: {format(new Date(job.followUpDate), 'MMM d, yyyy')}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button onClick={handleSave} size="sm">Save</Button>
+              <Button variant="outline" onClick={() => setIsEditing(false)} size="sm">Cancel</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="border-t pt-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Date Billed:</span> {paymentData.dateBilled || 'Not set'}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Date Received:</span> {paymentData.dateReceived || 'Not set'}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Collector:</span> {paymentData.collector || 'Not set'}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Payment Method:</span> {paymentData.paymentMethod || 'Not set'}
+              </div>
+            </div>
+            {notes && (
+              <div className="mt-3 text-sm">
+                <span className="text-muted-foreground">Notes:</span> {notes}
+              </div>
+            )}
+            {job.followUpDate && (
+              <div className="mt-2 text-sm text-muted-foreground">
+                Next change due: {format(new Date(job.followUpDate), 'MMM d, yyyy')}
+              </div>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => setIsEditing(true)}
+            >
+              <Pencil className="w-4 h-4 mr-2" />
+              Edit Payment & Notes
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function ManagerPage() {
   const [user, setUser] = useState<UserSession | null>(null);
@@ -291,9 +691,11 @@ function ManagerDashboard({ manager, onLogout }: { manager: Manager; onLogout: (
       </div>
 
       <Tabs defaultValue="bookings" className="space-y-4 md:space-y-6">
-        <TabsList className="grid w-full grid-cols-3 min-h-[44px]">
+        <TabsList className="grid w-full grid-cols-5 min-h-[44px]">
           <TabsTrigger value="bookings" className="text-xs sm:text-sm">Bookings</TabsTrigger>
-          <TabsTrigger value="mechanics" className="text-xs sm:text-sm">Mechanics</TabsTrigger>
+          <TabsTrigger value="customers" className="text-xs sm:text-sm">Customers</TabsTrigger>
+          <TabsTrigger value="job-records" className="text-xs sm:text-sm">Job Records</TabsTrigger>
+          <TabsTrigger value="mechanics" className="text-xs sm:text-sm">Technicians</TabsTrigger>
           <TabsTrigger value="time-tracking" className="text-xs sm:text-sm">Time Tracking</TabsTrigger>
         </TabsList>
 
@@ -340,9 +742,17 @@ function ManagerDashboard({ manager, onLogout }: { manager: Manager; onLogout: (
           )}
         </TabsContent>
 
+        <TabsContent value="customers" className="space-y-6">
+          <CustomersTab />
+        </TabsContent>
+
+        <TabsContent value="job-records" className="space-y-6">
+          <JobRecordsTab />
+        </TabsContent>
+
         <TabsContent value="mechanics" className="space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">Manage Mechanics</h2>
+            <h2 className="text-xl font-bold">Manage Technicians</h2>
             <AddMechanicDialog />
           </div>
           
@@ -351,7 +761,7 @@ function ManagerDashboard({ manager, onLogout }: { manager: Manager; onLogout: (
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {mechanics.length === 0 ? (
-                <p className="text-muted-foreground italic">No mechanics added yet.</p>
+                <p className="text-muted-foreground italic">No technicians added yet.</p>
               ) : (
                 mechanics.map(mechanic => (
                   <MechanicCard key={mechanic.id} mechanic={mechanic} />
@@ -516,6 +926,7 @@ function BookingCard({ appointment, mechanics, onUpdateStatus }: { appointment: 
 function MechanicCard({ mechanic }: { mechanic: Mechanic }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -524,7 +935,15 @@ function MechanicCard({ mechanic }: { mechanic: Mechanic }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mechanics'] });
-      toast({ title: "Mechanic removed" });
+      toast({ title: "Technician removed" });
+      setDeleteDialogOpen(false);
+    },
+    onError: () => {
+      toast({ 
+        title: "Error", 
+        description: "Failed to delete technician. Please try again.",
+        variant: "destructive" 
+      });
     },
   });
 
@@ -577,16 +996,38 @@ function MechanicCard({ mechanic }: { mechanic: Mechanic }) {
             />
             <span className="text-sm text-muted-foreground">Show on website</span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <EditTechnicianScheduleDialog mechanic={mechanic} />
             <EditMechanicDialog mechanic={mechanic} />
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="text-destructive hover:text-destructive"
-              onClick={() => deleteMutation.mutate(mechanic.id)}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Technician</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete <strong>{mechanic.name}</strong>? This action cannot be undone and will permanently remove this technician from the system.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteMutation.mutate(mechanic.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    disabled={deleteMutation.isPending}
+                  >
+                    {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </CardContent>
@@ -594,9 +1035,95 @@ function MechanicCard({ mechanic }: { mechanic: Mechanic }) {
   );
 }
 
+function TechnicianPhotoField({
+  value,
+  onChange,
+  disabled = false,
+}: {
+  value: string;
+  onChange: (url: string) => void;
+  disabled?: boolean;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const { toast } = useToast();
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) {
+      toast({ title: "Please choose an image file (JPEG, PNG, WebP, or GIF)", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      const res = await fetch("/api/upload/technician-photo", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Upload failed");
+      }
+      const data = await res.json();
+      onChange(data.url);
+      toast({ title: "Photo uploaded" });
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Upload failed", variant: "destructive" });
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label>Photo</Label>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={disabled || uploading}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ImagePlus className="w-4 h-4 mr-2" />}
+          {uploading ? "Uploading..." : "Upload from computer"}
+        </Button>
+        <span className="text-sm text-muted-foreground self-center">or paste URL below</span>
+      </div>
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="https://... or leave empty"
+        disabled={disabled}
+      />
+      {value && (
+        <div className="flex items-center gap-3 mt-2">
+          <img src={value} alt="Preview" className="w-16 h-16 rounded-full object-cover border" />
+          <Button type="button" variant="ghost" size="sm" onClick={() => onChange("")} disabled={disabled}>
+            Remove photo
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AddMechanicDialog() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
@@ -616,7 +1143,7 @@ function AddMechanicDialog() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mechanics'] });
-      toast({ title: "Mechanic added successfully" });
+      toast({ title: "Technician added successfully" });
       setOpen(false);
       resetForm();
     },
@@ -624,6 +1151,8 @@ function AddMechanicDialog() {
 
   const resetForm = () => {
     setName("");
+    setEmail("");
+    setPassword("");
     setPhone("");
     setBio("");
     setPhotoUrl("");
@@ -634,6 +1163,8 @@ function AddMechanicDialog() {
     e.preventDefault();
     createMutation.mutate({
       name,
+      email: email || null,
+      password: password || null,
       phone: phone || null,
       bio: bio || null,
       photoUrl: photoUrl || null,
@@ -648,17 +1179,39 @@ function AddMechanicDialog() {
       <DialogTrigger asChild>
         <Button className="gap-2">
           <Plus className="w-4 h-4" />
-          Add Mechanic
+          Add Technician
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add New Mechanic</DialogTitle>
+          <DialogTitle>Add New Technician</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>Name *</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
+          <div className="space-y-2">
+            <Label>Email *</Label>
+            <Input 
+              type="email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              placeholder="mechanic@example.com"
+              required 
+            />
+            <p className="text-xs text-muted-foreground">Used for login and job assignment notifications</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Initial Password *</Label>
+            <Input 
+              type="password" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              placeholder="Set a temporary password"
+              required 
+            />
+            <p className="text-xs text-muted-foreground">Mechanic can change this after first login</p>
           </div>
           <div className="space-y-2">
             <Label>Phone</Label>
@@ -668,10 +1221,7 @@ function AddMechanicDialog() {
             <Label>Bio</Label>
             <Textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Brief description..." />
           </div>
-          <div className="space-y-2">
-            <Label>Photo URL</Label>
-            <Input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder="https://..." />
-          </div>
+          <TechnicianPhotoField value={photoUrl} onChange={setPhotoUrl} disabled={createMutation.isPending} />
           <div className="flex items-center gap-2">
             <Switch checked={backgroundCheckVerified} onCheckedChange={setBackgroundCheckVerified} />
             <Label>Background Check Verified</Label>
@@ -682,6 +1232,154 @@ function AddMechanicDialog() {
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditTechnicianScheduleDialog({ mechanic }: { mechanic: Mechanic }) {
+  const [open, setOpen] = useState(false);
+  const [pendingChanges, setPendingChanges] = useState<Map<string, boolean>>(new Map());
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const weekDays = [
+    { dayOfWeek: 1, name: "Monday", short: "Mon" },
+    { dayOfWeek: 2, name: "Tuesday", short: "Tue" },
+    { dayOfWeek: 3, name: "Wednesday", short: "Wed" },
+    { dayOfWeek: 4, name: "Thursday", short: "Thu" },
+    { dayOfWeek: 5, name: "Friday", short: "Fri" },
+    { dayOfWeek: 6, name: "Saturday", short: "Sat" },
+    { dayOfWeek: 0, name: "Sunday", short: "Sun" },
+  ];
+
+  const { data: recurringSchedule = [], isLoading } = useQuery({
+    queryKey: ["/api/manager/technicians", mechanic.id, "recurring-schedule"],
+    queryFn: async () => {
+      const res = await fetch(`/api/manager/technicians/${mechanic.id}/recurring-schedule`);
+      if (!res.ok) throw new Error("Failed to fetch schedule");
+      return res.json();
+    },
+    enabled: open,
+  });
+
+  const saveScheduleMutation = useMutation({
+    mutationFn: async (schedules: Array<{ dayOfWeek: number; timeSlot: string; isAvailable: boolean }>) => {
+      const res = await fetch(`/api/manager/technicians/${mechanic.id}/recurring-schedule`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ schedules }),
+      });
+      if (!res.ok) throw new Error("Failed to save schedule");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/manager/technicians", mechanic.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/availability"] });
+      setPendingChanges(new Map());
+      toast({ title: "Schedule saved", description: `${mechanic.name}'s weekly schedule has been updated.` });
+      setOpen(false);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to save schedule", variant: "destructive" });
+    },
+  });
+
+  const isSlotAvailable = (dayOfWeek: number, timeSlot: string) => {
+    const key = `${dayOfWeek}|${timeSlot}`;
+    if (pendingChanges.has(key)) return pendingChanges.get(key) === true;
+    return recurringSchedule.some((s: { dayOfWeek: number; timeSlot: string; isAvailable: boolean }) =>
+      s.dayOfWeek === dayOfWeek && s.timeSlot === timeSlot && s.isAvailable
+    );
+  };
+
+  const handleToggle = (dayOfWeek: number, timeSlot: string) => {
+    const key = `${dayOfWeek}|${timeSlot}`;
+    setPendingChanges(prev => {
+      const next = new Map(prev);
+      next.set(key, !isSlotAvailable(dayOfWeek, timeSlot));
+      return next;
+    });
+  };
+
+  const handleSubmit = () => {
+    const savedMap = new Map<string, boolean>();
+    for (const s of recurringSchedule) {
+      savedMap.set(`${s.dayOfWeek}|${s.timeSlot}`, s.isAvailable);
+    }
+    pendingChanges.forEach((isAvailable, key) => savedMap.set(key, isAvailable));
+
+    const schedules: Array<{ dayOfWeek: number; timeSlot: string; isAvailable: boolean }> = [];
+    for (const day of weekDays) {
+      for (const slot of TIME_SLOTS) {
+        if (savedMap.get(`${day.dayOfWeek}|${slot}`) === true) {
+          schedules.push({ dayOfWeek: day.dayOfWeek, timeSlot: slot, isAvailable: true });
+        }
+      }
+    }
+    saveScheduleMutation.mutate(schedules);
+  };
+
+  const hasPendingChanges = pendingChanges.size > 0;
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">Edit Schedule</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-[95vw] md:max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{mechanic.name}'s Weekly Schedule</DialogTitle>
+          <p className="text-sm text-muted-foreground">Click time slots to mark as available. Changes apply only to {mechanic.name}.</p>
+        </DialogHeader>
+        {isLoading ? (
+          <div className="py-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>
+        ) : (
+          <div className="space-y-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="p-2 text-left text-sm font-medium w-24">Time</th>
+                    {weekDays.map(d => (
+                      <th key={d.dayOfWeek} className="p-2 text-center font-medium min-w-[80px]">{d.short}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {TIME_SLOTS.map(slot => (
+                    <tr key={slot} className="border-t">
+                      <td className="p-2 text-muted-foreground">{slot}</td>
+                      {weekDays.map(day => {
+                        const available = isSlotAvailable(day.dayOfWeek, slot);
+                        return (
+                          <td key={`${day.dayOfWeek}-${slot}`} className="p-1">
+                            <button
+                              type="button"
+                              onClick={() => handleToggle(day.dayOfWeek, slot)}
+                              disabled={saveScheduleMutation.isPending}
+                              className={`w-full h-9 rounded text-xs font-medium transition-colors ${
+                                available ? "bg-green-500 text-white hover:bg-green-600" : "bg-muted hover:bg-muted/80"
+                              }`}
+                            >
+                              {available ? "Yes" : "-"}
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button onClick={handleSubmit} disabled={saveScheduleMutation.isPending || !hasPendingChanges}>
+                {saveScheduleMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : "Save Schedule"}
+              </Button>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -736,7 +1434,7 @@ function EditMechanicDialog({ mechanic }: { mechanic: Mechanic }) {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit Mechanic</DialogTitle>
+          <DialogTitle>Edit Technician</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -751,10 +1449,7 @@ function EditMechanicDialog({ mechanic }: { mechanic: Mechanic }) {
             <Label>Bio</Label>
             <Textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Brief description..." />
           </div>
-          <div className="space-y-2">
-            <Label>Photo URL</Label>
-            <Input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder="https://..." />
-          </div>
+          <TechnicianPhotoField value={photoUrl} onChange={setPhotoUrl} disabled={updateMutation.isPending} />
           <div className="space-y-2">
             <Label>Oil Changes Completed</Label>
             <Input type="number" value={oilChangeCount} onChange={(e) => setOilChangeCount(parseInt(e.target.value) || 0)} />
@@ -1218,63 +1913,79 @@ function TimeTracker() {
   );
 }
 
+type RecurringSchedule = {
+  id: string;
+  mechanicId: string;
+  dayOfWeek: number; // 0=Sunday, 1=Monday, etc.
+  timeSlot: string;
+  isAvailable: boolean;
+};
+
 function AvailabilityScheduler() {
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [pendingChanges, setPendingChanges] = useState<Map<string, boolean>>(new Map());
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Days of the week (Monday=1, Tuesday=2, ..., Sunday=0)
+  const weekDays = [
+    { dayOfWeek: 1, name: "Monday", short: "Mon" },
+    { dayOfWeek: 2, name: "Tuesday", short: "Tue" },
+    { dayOfWeek: 3, name: "Wednesday", short: "Wed" },
+    { dayOfWeek: 4, name: "Thursday", short: "Thu" },
+    { dayOfWeek: 5, name: "Friday", short: "Fri" },
+    { dayOfWeek: 6, name: "Saturday", short: "Sat" },
+    { dayOfWeek: 0, name: "Sunday", short: "Sun" },
+  ];
 
-  const { data: availability = [], isLoading } = useQuery<Availability[]>({
-    queryKey: ["/api/mechanic/availability", format(weekStart, "yyyy-MM-dd")],
+  const { data: recurringSchedule = [], isLoading } = useQuery<RecurringSchedule[]>({
+    queryKey: ["/api/mechanic/recurring-schedule"],
     queryFn: async () => {
-      const res = await fetch(`/api/mechanic/availability?fromDate=${format(weekStart, "yyyy-MM-dd")}`);
-      if (!res.ok) throw new Error("Failed to fetch availability");
+      const res = await fetch("/api/mechanic/recurring-schedule");
+      if (!res.ok) throw new Error("Failed to fetch recurring schedule");
       return res.json();
     },
   });
 
-  const batchUpdateMutation = useMutation({
-    mutationFn: async (changes: Array<{ date: string; timeSlot: string; isAvailable: boolean }>) => {
-      const res = await fetch("/api/mechanic/availability/batch", {
+  const saveScheduleMutation = useMutation({
+    mutationFn: async (schedules: Array<{ dayOfWeek: number; timeSlot: string; isAvailable: boolean }>) => {
+      const res = await fetch("/api/mechanic/recurring-schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ availabilities: changes }),
+        body: JSON.stringify({ schedules }),
       });
-      if (!res.ok) throw new Error("Failed to update availability");
+      if (!res.ok) throw new Error("Failed to save schedule");
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/mechanic/availability"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/mechanic/recurring-schedule"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/availability"] }); // Invalidate booking availability
       setPendingChanges(new Map());
       toast({
         title: "Success",
-        description: "Availability updated successfully",
+        description: "Weekly schedule saved! This will apply to all future weeks.",
       });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to update availability",
+        description: "Failed to save schedule",
         variant: "destructive",
       });
     },
   });
 
-  const isSlotAvailable = (date: Date, timeSlot: string) => {
-    const dateStr = format(date, "yyyy-MM-dd");
-    const key = `${dateStr}|${timeSlot}`;
+  const isSlotAvailable = (dayOfWeek: number, timeSlot: string) => {
+    const key = `${dayOfWeek}|${timeSlot}`;
+    // Check pending changes first, then saved schedule
     if (pendingChanges.has(key)) {
       return pendingChanges.get(key) === true;
     }
-    return availability.some(a => a.date === dateStr && a.timeSlot === timeSlot && a.isAvailable);
+    return recurringSchedule.some(s => s.dayOfWeek === dayOfWeek && s.timeSlot === timeSlot && s.isAvailable);
   };
 
-  const handleToggle = (date: Date, timeSlot: string) => {
-    const dateStr = format(date, "yyyy-MM-dd");
-    const key = `${dateStr}|${timeSlot}`;
-    const currentlyAvailable = isSlotAvailable(date, timeSlot);
+  const handleToggle = (dayOfWeek: number, timeSlot: string) => {
+    const key = `${dayOfWeek}|${timeSlot}`;
+    const currentlyAvailable = isSlotAvailable(dayOfWeek, timeSlot);
     setPendingChanges(prev => {
       const newMap = new Map(prev);
       newMap.set(key, !currentlyAvailable);
@@ -1283,20 +1994,37 @@ function AvailabilityScheduler() {
   };
 
   const handleSubmit = () => {
-    const changes: Array<{ date: string; timeSlot: string; isAvailable: boolean }> = [];
-    pendingChanges.forEach((isAvailable, key) => {
-      const [date, ...timeSlotParts] = key.split('|');
-      const timeSlot = timeSlotParts.join('|');
-      changes.push({ date, timeSlot, isAvailable });
-    });
-    if (changes.length === 0) {
-      toast({
-        title: "No changes",
-        description: "No availability changes to submit",
-      });
-      return;
+    // Build schedule from all time slots
+    const schedules: Array<{ dayOfWeek: number; timeSlot: string; isAvailable: boolean }> = [];
+    
+    // First, get all currently saved schedules
+    const savedMap = new Map<string, boolean>();
+    for (const s of recurringSchedule) {
+      savedMap.set(`${s.dayOfWeek}|${s.timeSlot}`, s.isAvailable);
     }
-    batchUpdateMutation.mutate(changes);
+    
+    // Apply pending changes
+    const finalMap = new Map(savedMap);
+    pendingChanges.forEach((isAvailable, key) => {
+      finalMap.set(key, isAvailable);
+    });
+    
+    // Build schedule array - include all slots that are available
+    for (const day of weekDays) {
+      for (const slot of TIME_SLOTS) {
+        const key = `${day.dayOfWeek}|${slot}`;
+        const isAvailable = finalMap.get(key) === true;
+        if (isAvailable) {
+          schedules.push({
+            dayOfWeek: day.dayOfWeek,
+            timeSlot: slot,
+            isAvailable: true,
+          });
+        }
+      }
+    }
+    
+    saveScheduleMutation.mutate(schedules);
   };
 
   const hasPendingChanges = pendingChanges.size > 0;
@@ -1304,50 +2032,29 @@ function AvailabilityScheduler() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Weekly Availability</CardTitle>
-            <CardDescription>Click time slots to mark yourself as available, then click Submit to save changes</CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => setWeekStart(prev => addDays(prev, -7))}
-              data-testid="button-prev-week"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="text-sm font-medium min-w-[160px] text-center">
-              {format(weekStart, "MMM d")} - {format(addDays(weekStart, 6), "MMM d, yyyy")}
-            </span>
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => setWeekStart(prev => addDays(prev, 7))}
-              data-testid="button-next-week"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
+        <div>
+          <CardTitle className="text-lg md:text-xl">📅 Weekly Schedule Template</CardTitle>
+          <CardDescription className="text-xs md:text-sm">
+            Set your recurring weekly schedule once. This will automatically apply to all future weeks.
+          </CardDescription>
         </div>
       </CardHeader>
       {hasPendingChanges && (
         <CardContent className="pb-4">
-          <div className="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
             <span className="text-sm text-yellow-800">
               You have {pendingChanges.size} pending change{pendingChanges.size !== 1 ? 's' : ''}
             </span>
             <Button
               onClick={handleSubmit}
-              disabled={batchUpdateMutation.isPending}
-              className="bg-black text-white hover:bg-gray-800"
+              disabled={saveScheduleMutation.isPending}
+              className="bg-black text-white hover:bg-gray-800 w-full sm:w-auto min-h-[44px]"
               data-testid="button-submit-availability"
             >
-              {batchUpdateMutation.isPending ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Submitting...</>
+              {saveScheduleMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
               ) : (
-                "Submit"
+                "Save Schedule"
               )}
             </Button>
           </div>
@@ -1365,9 +2072,9 @@ function AvailabilityScheduler() {
                 <tr>
                   <th className="p-2 text-left text-sm font-medium text-gray-500 w-24">Time</th>
                   {weekDays.map(day => (
-                    <th key={day.toISOString()} className="p-2 text-center text-sm font-medium min-w-[100px]">
-                      <div>{format(day, "EEE")}</div>
-                      <div className="text-gray-500">{format(day, "MMM d")}</div>
+                    <th key={day.dayOfWeek} className="p-2 text-center text-sm font-medium min-w-[100px]">
+                      <div className="font-bold text-base">{day.short}</div>
+                      <div className="text-gray-500 text-xs mt-1">{day.name}</div>
                     </th>
                   ))}
                 </tr>
@@ -1375,23 +2082,20 @@ function AvailabilityScheduler() {
               <tbody>
                 {TIME_SLOTS.map(slot => (
                   <tr key={slot} className="border-t">
-                    <td className="p-2 text-sm text-gray-600">{slot}</td>
+                    <td className="p-2 text-sm text-gray-600 font-medium">{slot}</td>
                     {weekDays.map(day => {
-                      const available = isSlotAvailable(day, slot);
-                      const isPast = day < new Date() && !isSameDay(day, new Date());
+                      const available = isSlotAvailable(day.dayOfWeek, slot);
                       return (
-                        <td key={day.toISOString()} className="p-1">
+                        <td key={`${day.dayOfWeek}-${slot}`} className="p-1">
                           <button
-                            onClick={() => !isPast && handleToggle(day, slot)}
-                            disabled={isPast || batchUpdateMutation.isPending}
-                            className={`w-full h-10 rounded text-xs font-medium transition-colors ${
-                              isPast 
-                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                : available 
-                                  ? "bg-green-500 text-white hover:bg-green-600" 
-                                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                            onClick={() => handleToggle(day.dayOfWeek, slot)}
+                            disabled={saveScheduleMutation.isPending}
+                            className={`w-full h-10 md:h-10 min-h-[40px] rounded text-xs font-medium transition-colors active:scale-95 touch-manipulation ${
+                              available 
+                                ? "bg-green-500 text-white hover:bg-green-600" 
+                                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                             }`}
-                            data-testid={`slot-${format(day, "yyyy-MM-dd")}-${slot.replace(/\s/g, "-")}`}
+                            data-testid={`slot-${day.dayOfWeek}-${slot.replace(/\s/g, "-")}`}
                           >
                             {available ? "Available" : "-"}
                           </button>
@@ -1402,6 +2106,21 @@ function AvailabilityScheduler() {
                 ))}
               </tbody>
             </table>
+            {!hasPendingChanges && (
+              <div className="mt-4 pt-4 border-t">
+                <Button
+                  onClick={handleSubmit}
+                  disabled={saveScheduleMutation.isPending}
+                  className="bg-black text-white hover:bg-gray-800 w-full sm:w-auto min-h-[44px]"
+                >
+                  {saveScheduleMutation.isPending ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
+                  ) : (
+                    "Save Schedule"
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

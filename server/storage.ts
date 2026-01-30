@@ -1,4 +1,4 @@
-import { type Mechanic, type InsertMechanic, type Appointment, type InsertAppointment, type Manager, type InsertManager, type MechanicAvailability, type InsertMechanicAvailability, type MechanicTimeEntry, type InsertMechanicTimeEntry, mechanics, appointments, managers, mechanicAvailability, mechanicTimeEntries } from "@shared/schema";
+import { type Mechanic, type InsertMechanic, type Appointment, type InsertAppointment, type Manager, type InsertManager, type MechanicAvailability, type InsertMechanicAvailability, type MechanicTimeEntry, type InsertMechanicTimeEntry, type MechanicRecurringSchedule, type InsertMechanicRecurringSchedule, type Customer, type InsertCustomer, mechanics, appointments, managers, mechanicAvailability, mechanicTimeEntries, mechanicRecurringSchedule, customers } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, desc, sql, lte } from "drizzle-orm";
 
@@ -36,6 +36,25 @@ export interface IStorage {
   updateTimeEntryCheckOut(id: string): Promise<MechanicTimeEntry | undefined>;
   setMechanicAvailabilityBatch(availabilities: InsertMechanicAvailability[]): Promise<MechanicAvailability[]>;
   getAvailableMechanicsForSlot(date: string, timeSlot: string): Promise<Mechanic[]>;
+  
+  // Recurring schedule methods
+  getRecurringScheduleByMechanic(mechanicId: string): Promise<MechanicRecurringSchedule[]>;
+  setRecurringScheduleBatch(mechanicId: string, schedules: InsertMechanicRecurringSchedule[]): Promise<MechanicRecurringSchedule[]>;
+  deleteRecurringSchedule(mechanicId: string, dayOfWeek: number, timeSlot: string): Promise<boolean>;
+  
+  // Customer methods
+  getCustomers(): Promise<Customer[]>;
+  getCustomer(id: string): Promise<Customer | undefined>;
+  getCustomerByEmail(email: string): Promise<Customer | undefined>;
+  createOrGetCustomer(customer: InsertCustomer): Promise<Customer>;
+  updateCustomer(id: string, data: Partial<InsertCustomer>): Promise<Customer | undefined>;
+  getAppointmentsByCustomer(customerId: string): Promise<Appointment[]>;
+  
+  // Appointment updates for payment tracking
+  updateAppointmentPayment(id: string, data: { dateBilled?: string; dateReceived?: string; isPaid?: boolean; collector?: string; paymentMethod?: string; stripePaymentIntentId?: string; stripeChargeId?: string; paymentStatus?: string }): Promise<Appointment | undefined>;
+  updateAppointmentNotes(id: string, notes: string): Promise<Appointment | undefined>;
+  updateAppointmentFollowUp(id: string, followUpDate: string): Promise<Appointment | undefined>;
+  getNextJobNumber(): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -111,8 +130,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAvailableSlotsWithMechanics(date: string): Promise<Array<{ timeSlot: string; mechanics: Mechanic[] }>> {
-    // Get all available slots for the date with mechanic info in one query
-    const availabilities = await db.select({
+    // Get day of week (0=Sunday, 1=Monday, etc.)
+    const dateObj = new Date(date + 'T00:00:00');
+    const dayOfWeek = dateObj.getDay();
+    
+    // Get all mechanics with their recurring schedules for this day of week
+    const recurringSchedules = await db.select({
+      timeSlot: mechanicRecurringSchedule.timeSlot,
+      mechanicId: mechanicRecurringSchedule.mechanicId,
+      mechanicIdField: mechanics.id,
+      mechanicName: mechanics.name,
+      mechanicEmail: mechanics.email,
+      mechanicPhone: mechanics.phone,
+      mechanicPhotoUrl: mechanics.photoUrl,
+      mechanicBio: mechanics.bio,
+      mechanicOilChangeCount: mechanics.oilChangeCount,
+      mechanicBackgroundCheckVerified: mechanics.backgroundCheckVerified,
+      mechanicIsPublic: mechanics.isPublic,
+    })
+      .from(mechanicRecurringSchedule)
+      .innerJoin(mechanics, eq(mechanicRecurringSchedule.mechanicId, mechanics.id))
+      .where(and(
+        eq(mechanicRecurringSchedule.dayOfWeek, dayOfWeek),
+        eq(mechanicRecurringSchedule.isAvailable, true)
+      ));
+    
+    // Also get specific date overrides (if any exist)
+    const dateOverrides = await db.select({
       timeSlot: mechanicAvailability.timeSlot,
       mechanicId: mechanicAvailability.mechanicId,
       mechanicIdField: mechanics.id,
@@ -128,6 +172,9 @@ export class DatabaseStorage implements IStorage {
       .from(mechanicAvailability)
       .innerJoin(mechanics, eq(mechanicAvailability.mechanicId, mechanics.id))
       .where(and(eq(mechanicAvailability.date, date), eq(mechanicAvailability.isAvailable, true)));
+    
+    // Combine recurring schedules and date overrides
+    const availabilities = [...recurringSchedules, ...dateOverrides];
 
     // Normalize time slot format function
     const normalizeSlot = (slot: string) => {
@@ -217,10 +264,111 @@ export class DatabaseStorage implements IStorage {
     return appointment || undefined;
   }
 
+  async getNextJobNumber(): Promise<number> {
+    const result = await db.execute(sql`SELECT nextval('job_number_seq') as next_num`);
+    return parseInt(result.rows[0]?.next_num || '1');
+  }
+
+  // Customer methods
+  async getCustomers(): Promise<Customer[]> {
+    return await db.select().from(customers).orderBy(desc(customers.createdAt));
+  }
+
+  async getCustomer(id: string): Promise<Customer | undefined> {
+    const [customer] = await db.select().from(customers).where(eq(customers.id, id));
+    return customer || undefined;
+  }
+
+  async getCustomerByEmail(email: string): Promise<Customer | undefined> {
+    const [customer] = await db.select().from(customers).where(eq(customers.email, email));
+    return customer || undefined;
+  }
+
+  async createOrGetCustomer(customerData: InsertCustomer): Promise<Customer> {
+    // Try to find existing customer by email
+    const existing = await this.getCustomerByEmail(customerData.email);
+    
+    if (existing) {
+      // Update existing customer with new data
+      const [updated] = await db
+        .update(customers)
+        .set({
+          name: customerData.name,
+          phone: customerData.phone,
+          preferredContactMethod: customerData.preferredContactMethod || existing.preferredContactMethod,
+          address: customerData.address || existing.address,
+        })
+        .where(eq(customers.id, existing.id))
+        .returning();
+      return updated || existing;
+    }
+    
+    // Create new customer
+    const [newCustomer] = await db
+      .insert(customers)
+      .values(customerData)
+      .returning();
+    return newCustomer;
+  }
+
+  async updateCustomer(id: string, data: Partial<InsertCustomer>): Promise<Customer | undefined> {
+    const [updated] = await db
+      .update(customers)
+      .set(data)
+      .where(eq(customers.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getAppointmentsByCustomer(customerId: string): Promise<Appointment[]> {
+    return await db
+      .select()
+      .from(appointments)
+      .where(eq(appointments.customerId, customerId))
+      .orderBy(desc(appointments.date));
+  }
+
+  // Appointment update methods for payment tracking
+  async updateAppointmentPayment(
+    id: string,
+    data: { dateBilled?: string; dateReceived?: string; isPaid?: boolean; collector?: string; paymentMethod?: string; stripePaymentIntentId?: string; stripeChargeId?: string; paymentStatus?: string }
+  ): Promise<Appointment | undefined> {
+    const [updated] = await db
+      .update(appointments)
+      .set(data)
+      .where(eq(appointments.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async updateAppointmentNotes(id: string, notes: string): Promise<Appointment | undefined> {
+    const [updated] = await db
+      .update(appointments)
+      .set({ notes })
+      .where(eq(appointments.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async updateAppointmentFollowUp(id: string, followUpDate: string): Promise<Appointment | undefined> {
+    const [updated] = await db
+      .update(appointments)
+      .set({ followUpDate })
+      .where(eq(appointments.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
   async createAppointment(insertAppointment: InsertAppointment): Promise<Appointment> {
+    // Get next job number if not provided
+    let jobNumber = insertAppointment.jobNumber;
+    if (!jobNumber) {
+      jobNumber = await this.getNextJobNumber();
+    }
+    
     const [appointment] = await db
       .insert(appointments)
-      .values(insertAppointment)
+      .values({ ...insertAppointment, jobNumber })
       .returning();
     return appointment;
   }
@@ -352,8 +500,23 @@ export class DatabaseStorage implements IStorage {
     
     const normalizedSlot = normalizeSlot(timeSlot);
     
-    // Get mechanics available for this slot
-    const mechanicIds = await db.select({
+    // Get day of week (0=Sunday, 1=Monday, etc.)
+    const dateObj = new Date(date + 'T00:00:00');
+    const dayOfWeek = dateObj.getDay();
+    
+    // Get mechanics from recurring schedule
+    const recurringMechanicIds = await db.select({
+      mechanicId: mechanicRecurringSchedule.mechanicId,
+    })
+      .from(mechanicRecurringSchedule)
+      .where(and(
+        eq(mechanicRecurringSchedule.dayOfWeek, dayOfWeek),
+        eq(mechanicRecurringSchedule.timeSlot, normalizedSlot),
+        eq(mechanicRecurringSchedule.isAvailable, true)
+      ));
+    
+    // Get mechanics from specific date overrides
+    const overrideMechanicIds = await db.select({
       mechanicId: mechanicAvailability.mechanicId,
     })
       .from(mechanicAvailability)
@@ -363,25 +526,31 @@ export class DatabaseStorage implements IStorage {
         eq(mechanicAvailability.isAvailable, true)
       ));
     
-    // Also try the original format if different
+    // Also try the original format if different (for date overrides)
     let altMechanicIds: { mechanicId: string }[] = [];
     if (normalizedSlot !== timeSlot) {
       altMechanicIds = await db.select({
         mechanicId: mechanicAvailability.mechanicId,
       })
-        .from(mechanicAvailability)
-        .where(and(
-          eq(mechanicAvailability.date, date),
-          eq(mechanicAvailability.timeSlot, timeSlot),
-          eq(mechanicAvailability.isAvailable, true)
-        ));
+      .from(mechanicAvailability)
+      .where(and(
+        eq(mechanicAvailability.date, date),
+        eq(mechanicAvailability.timeSlot, timeSlot),
+        eq(mechanicAvailability.isAvailable, true)
+      ));
     }
     
-    // Get unique mechanic IDs
-    const uniqueIds = new Set([
-      ...mechanicIds.map(m => m.mechanicId),
-      ...altMechanicIds.map(m => m.mechanicId)
-    ]);
+    // Combine and deduplicate mechanic IDs from all sources
+    const uniqueIds = new Set<string>();
+    for (const m of recurringMechanicIds) {
+      uniqueIds.add(m.mechanicId);
+    }
+    for (const m of overrideMechanicIds) {
+      uniqueIds.add(m.mechanicId);
+    }
+    for (const m of altMechanicIds) {
+      uniqueIds.add(m.mechanicId);
+    }
     
     if (uniqueIds.size === 0) {
       return [];
@@ -390,6 +559,38 @@ export class DatabaseStorage implements IStorage {
     // Fetch full mechanic records
     const allMechanics = await db.select().from(mechanics);
     return allMechanics.filter(m => uniqueIds.has(m.id));
+  }
+
+  async getRecurringScheduleByMechanic(mechanicId: string): Promise<MechanicRecurringSchedule[]> {
+    return await db.select().from(mechanicRecurringSchedule)
+      .where(eq(mechanicRecurringSchedule.mechanicId, mechanicId));
+  }
+
+  async setRecurringScheduleBatch(mechanicId: string, schedules: InsertMechanicRecurringSchedule[]): Promise<MechanicRecurringSchedule[]> {
+    // First, delete all existing schedules for this mechanic
+    await db.delete(mechanicRecurringSchedule)
+      .where(eq(mechanicRecurringSchedule.mechanicId, mechanicId));
+    
+    // Then insert the new schedules
+    if (schedules.length === 0) {
+      return [];
+    }
+    
+    const results = await db.insert(mechanicRecurringSchedule)
+      .values(schedules.map(s => ({ ...s, mechanicId })))
+      .returning();
+    
+    return results;
+  }
+
+  async deleteRecurringSchedule(mechanicId: string, dayOfWeek: number, timeSlot: string): Promise<boolean> {
+    await db.delete(mechanicRecurringSchedule)
+      .where(and(
+        eq(mechanicRecurringSchedule.mechanicId, mechanicId),
+        eq(mechanicRecurringSchedule.dayOfWeek, dayOfWeek),
+        eq(mechanicRecurringSchedule.timeSlot, timeSlot)
+      ));
+    return true;
   }
 }
 

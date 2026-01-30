@@ -1,6 +1,7 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Truck, Car, Phone, Mail, Facebook, Instagram, Twitter, Shield, User, Wrench } from "lucide-react";
+import { Calendar, Truck, Car, Shield, User, Wrench } from "lucide-react";
 import { Link } from "wouter";
 import heroImage from "@assets/stock_images/classic_muscle_car_b_0af1eeeb.jpg";
 import logoImage from "@/assets/logo.png";
@@ -26,6 +27,16 @@ export default function Home() {
       return response.json();
     },
   });
+
+  // Scroll to hash when navigating from another page (e.g. /booking with #technicians)
+  useEffect(() => {
+    const hash = window.location.hash?.replace('#', '');
+    if (!hash) return;
+    if (hash === 'technicians' && mechanics.length === 0) return; // Wait for mechanics to load
+    const el = document.getElementById(hash);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [mechanics.length]);
+
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
@@ -83,20 +94,20 @@ export default function Home() {
             <StepCard 
               number="1"
               icon={Calendar}
-              title="Pick a Time"
-              description="Fill out our booking form to schedule a time that works for you. We'll reach out to confirm your appointment."
+              title="Book Online"
+              description="Fill out our booking form to schedule a time that works for you. You'll receive an email confirmation immediately, and you can cancel up to 2 hours before your appointment if needed."
             />
             <StepCard 
               number="2"
               icon={Truck}
-              title="We'll Stop By"
-              description="When the time comes, we'll come to you to start the change!"
+              title="We Come to You"
+              description="On the day of your appointment, you'll receive a reminder email. Our technician arrives at your location, you hand over your keys, and we complete the service right at your doorstep. When finished, we return your keys and let you know your vehicle is ready."
             />
             <StepCard 
               number="3"
               icon={Car}
-              title="Drive With Confidence"
-              description="Tired of keeping track of vehicle maintenance? We manage a schedule for your vehicle's needs, including reminders for your next oil change!"
+              title="Stay on Schedule"
+              description="Six months later, we'll email you a reminder that your oil change is due, making it easy to book your next service and stay on top of your vehicle maintenance."
             />
           </div>
         </div>
@@ -107,9 +118,14 @@ export default function Home() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Price</h2>
           <div className="w-24 h-1 bg-primary mx-auto mb-8"></div>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-4">
-            Starting at <span className="text-primary font-bold text-3xl">$95</span> for most vehicles
-          </p>
+          <div className="max-w-2xl mx-auto mb-4">
+            <p className="text-xl text-muted-foreground mb-2">
+              <span className="text-primary font-bold text-3xl">$95</span> for Sedan/Compact
+            </p>
+            <p className="text-xl text-muted-foreground mb-4">
+              <span className="text-primary font-bold text-3xl">$105</span> for SUV/Truck
+            </p>
+          </div>
           <p className="text-muted-foreground max-w-xl mx-auto">
             Our service includes complimentary wiper fluid top-off and tire air pressure check.
           </p>
@@ -121,56 +137,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Referral Section */}
-      <section className="py-16 bg-primary text-white">
-        <div className="container mx-auto px-4 text-center">
-          <div className="flex justify-center mb-6">
-            <img src={logoImage} alt="The Oil Boys Logo" className="h-24 md:h-32 w-auto object-contain" />
-          </div>
-          <h2 className="text-2xl md:text-3xl font-display font-bold mb-4">
-            Share to Save Big!
-          </h2>
-          <p className="text-xl">
-            Refer a friend to get <span className="font-bold text-2xl">20% off</span> your next oil change.
-          </p>
-        </div>
-      </section>
-
-      {/* Contact Section */}
-      <section className="py-16 bg-background">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-2 gap-12 max-w-4xl mx-auto">
-            <div>
-              <h3 className="text-2xl font-display font-bold mb-6">Contact Us</h3>
-              <div className="space-y-4">
-                <a href="tel:3852691482" className="flex items-center gap-3 text-lg text-muted-foreground hover:text-primary transition-colors">
-                  <Phone className="w-5 h-5" />
-                  <span>Call or Text: (385) 269-1482</span>
-                </a>
-                <a href="mailto:theoilboysllc@gmail.com" className="flex items-center gap-3 text-lg text-muted-foreground hover:text-primary transition-colors">
-                  <Mail className="w-5 h-5" />
-                  <span>theoilboysllc@gmail.com</span>
-                </a>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-2xl font-display font-bold mb-6">Social Media</h3>
-              <div className="flex gap-4">
-                <a href="https://www.facebook.com/profile.php?id=61558814451469" target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center hover:bg-primary/80 transition-colors" data-testid="link-facebook">
-                  <Facebook className="w-6 h-6" />
-                </a>
-                <a href="https://www.instagram.com/theoilboysllc" target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center hover:bg-primary/80 transition-colors" data-testid="link-instagram">
-                  <Instagram className="w-6 h-6" />
-                </a>
-                <a href="https://x.com/theoilboysllc" target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center hover:bg-primary/80 transition-colors" data-testid="link-twitter">
-                  <Twitter className="w-6 h-6" />
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

@@ -44,7 +44,8 @@ type Availability = {
 
 const TIME_SLOTS = [
   "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
-  "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM"
+  "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM",
+  "6:00 PM", "7:00 PM", "8:00 PM"
 ];
 
 export default function MechanicPage() {
@@ -504,65 +505,79 @@ function WeeklyTimeTracker() {
   );
 }
 
+type RecurringSchedule = {
+  id: string;
+  mechanicId: string;
+  dayOfWeek: number; // 0=Sunday, 1=Monday, etc.
+  timeSlot: string;
+  isAvailable: boolean;
+};
+
 function AvailabilityScheduler() {
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [pendingChanges, setPendingChanges] = useState<Map<string, boolean>>(new Map());
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Days of the week (Monday=1, Tuesday=2, ..., Sunday=0)
+  const weekDays = [
+    { dayOfWeek: 1, name: "Monday", short: "Mon" },
+    { dayOfWeek: 2, name: "Tuesday", short: "Tue" },
+    { dayOfWeek: 3, name: "Wednesday", short: "Wed" },
+    { dayOfWeek: 4, name: "Thursday", short: "Thu" },
+    { dayOfWeek: 5, name: "Friday", short: "Fri" },
+    { dayOfWeek: 6, name: "Saturday", short: "Sat" },
+    { dayOfWeek: 0, name: "Sunday", short: "Sun" },
+  ];
 
-  const { data: availability = [], isLoading } = useQuery<Availability[]>({
-    queryKey: ["/api/mechanic/availability", format(weekStart, "yyyy-MM-dd")],
+  const { data: recurringSchedule = [], isLoading } = useQuery<RecurringSchedule[]>({
+    queryKey: ["/api/mechanic/recurring-schedule"],
     queryFn: async () => {
-      const res = await fetch(`/api/mechanic/availability?fromDate=${format(weekStart, "yyyy-MM-dd")}`);
-      if (!res.ok) throw new Error("Failed to fetch availability");
+      const res = await fetch("/api/mechanic/recurring-schedule");
+      if (!res.ok) throw new Error("Failed to fetch recurring schedule");
       return res.json();
     },
   });
 
-  const batchUpdateMutation = useMutation({
-    mutationFn: async (changes: Array<{ date: string; timeSlot: string; isAvailable: boolean }>) => {
-      const res = await fetch("/api/mechanic/availability/batch", {
+  const saveScheduleMutation = useMutation({
+    mutationFn: async (schedules: Array<{ dayOfWeek: number; timeSlot: string; isAvailable: boolean }>) => {
+      const res = await fetch("/api/mechanic/recurring-schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ availabilities: changes }),
+        body: JSON.stringify({ schedules }),
       });
-      if (!res.ok) throw new Error("Failed to update availability");
+      if (!res.ok) throw new Error("Failed to save schedule");
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/mechanic/availability"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/mechanic/recurring-schedule"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/availability"] }); // Invalidate booking availability
       setPendingChanges(new Map());
       toast({
         title: "Success",
-        description: "Availability updated successfully",
+        description: "Weekly schedule saved! This will apply to all future weeks.",
       });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to update availability",
+        description: "Failed to save schedule",
         variant: "destructive",
       });
     },
   });
 
-  const isSlotAvailable = (date: Date, timeSlot: string) => {
-    const dateStr = format(date, "yyyy-MM-dd");
-    const key = `${dateStr}|${timeSlot}`;
-    // Check pending changes first, then saved availability
+  const isSlotAvailable = (dayOfWeek: number, timeSlot: string) => {
+    const key = `${dayOfWeek}|${timeSlot}`;
+    // Check pending changes first, then saved schedule
     if (pendingChanges.has(key)) {
       return pendingChanges.get(key) === true;
     }
-    return availability.some(a => a.date === dateStr && a.timeSlot === timeSlot && a.isAvailable);
+    return recurringSchedule.some(s => s.dayOfWeek === dayOfWeek && s.timeSlot === timeSlot && s.isAvailable);
   };
 
-  const handleToggle = (date: Date, timeSlot: string) => {
-    const dateStr = format(date, "yyyy-MM-dd");
-    // Use | separator since timeSlot may contain dashes
-    const key = `${dateStr}|${timeSlot}`;
-    const currentlyAvailable = isSlotAvailable(date, timeSlot);
+  const handleToggle = (dayOfWeek: number, timeSlot: string) => {
+    const key = `${dayOfWeek}|${timeSlot}`;
+    const currentlyAvailable = isSlotAvailable(dayOfWeek, timeSlot);
     setPendingChanges(prev => {
       const newMap = new Map(prev);
       newMap.set(key, !currentlyAvailable);
@@ -571,21 +586,37 @@ function AvailabilityScheduler() {
   };
 
   const handleSubmit = () => {
-    const changes: Array<{ date: string; timeSlot: string; isAvailable: boolean }> = [];
-    pendingChanges.forEach((isAvailable, key) => {
-      // Key format: "date|timeSlot"
-      const [date, ...timeSlotParts] = key.split('|');
-      const timeSlot = timeSlotParts.join('|');
-      changes.push({ date, timeSlot, isAvailable });
-    });
-    if (changes.length === 0) {
-      toast({
-        title: "No changes",
-        description: "No availability changes to submit",
-      });
-      return;
+    // Build schedule from all time slots
+    const schedules: Array<{ dayOfWeek: number; timeSlot: string; isAvailable: boolean }> = [];
+    
+    // First, get all currently saved schedules
+    const savedMap = new Map<string, boolean>();
+    for (const s of recurringSchedule) {
+      savedMap.set(`${s.dayOfWeek}|${s.timeSlot}`, s.isAvailable);
     }
-    batchUpdateMutation.mutate(changes);
+    
+    // Apply pending changes
+    const finalMap = new Map(savedMap);
+    pendingChanges.forEach((isAvailable, key) => {
+      finalMap.set(key, isAvailable);
+    });
+    
+    // Build schedule array - include all slots that are available
+    for (const day of weekDays) {
+      for (const slot of TIME_SLOTS) {
+        const key = `${day.dayOfWeek}|${slot}`;
+        const isAvailable = finalMap.get(key) === true;
+        if (isAvailable) {
+          schedules.push({
+            dayOfWeek: day.dayOfWeek,
+            timeSlot: slot,
+            isAvailable: true,
+          });
+        }
+      }
+    }
+    
+    saveScheduleMutation.mutate(schedules);
   };
 
   const hasPendingChanges = pendingChanges.size > 0;
@@ -593,34 +624,12 @@ function AvailabilityScheduler() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <CardTitle className="text-lg md:text-xl">Weekly Availability</CardTitle>
-            <CardDescription className="text-xs md:text-sm">Click time slots to mark yourself as available, then click Submit to save changes</CardDescription>
-          </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => setWeekStart(prev => addDays(prev, -7))}
-              data-testid="button-prev-week"
-              className="min-h-[44px] min-w-[44px]"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="text-xs md:text-sm font-medium flex-1 sm:flex-none sm:min-w-[160px] text-center">
-              {format(weekStart, "MMM d")} - {format(addDays(weekStart, 6), "MMM d, yyyy")}
-            </span>
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => setWeekStart(prev => addDays(prev, 7))}
-              data-testid="button-next-week"
-              className="min-h-[44px] min-w-[44px]"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
+        <div>
+          <CardTitle className="text-lg md:text-xl">📅 Weekly Schedule Template</CardTitle>
+          <CardDescription className="text-xs md:text-sm">
+            Set your recurring weekly schedule once. This will automatically apply to all future weeks.
+          </CardDescription>
+          {/* Force rebuild - v2 */}
         </div>
       </CardHeader>
       {hasPendingChanges && (
@@ -631,14 +640,14 @@ function AvailabilityScheduler() {
             </span>
             <Button
               onClick={handleSubmit}
-              disabled={batchUpdateMutation.isPending}
+              disabled={saveScheduleMutation.isPending}
               className="bg-black text-white hover:bg-gray-800 w-full sm:w-auto min-h-[44px]"
               data-testid="button-submit-availability"
             >
-              {batchUpdateMutation.isPending ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Submitting...</>
+              {saveScheduleMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
               ) : (
-                "Submit"
+                "Save Schedule"
               )}
             </Button>
           </div>
@@ -656,9 +665,9 @@ function AvailabilityScheduler() {
                 <tr>
                   <th className="p-2 text-left text-sm font-medium text-gray-500 w-24">Time</th>
                   {weekDays.map(day => (
-                    <th key={day.toISOString()} className="p-2 text-center text-sm font-medium min-w-[100px]">
-                      <div>{format(day, "EEE")}</div>
-                      <div className="text-gray-500">{format(day, "MMM d")}</div>
+                    <th key={day.dayOfWeek} className="p-2 text-center text-sm font-medium min-w-[100px]">
+                      <div className="font-bold text-base">{day.short}</div>
+                      <div className="text-gray-500 text-xs mt-1">{day.name}</div>
                     </th>
                   ))}
                 </tr>
@@ -666,23 +675,20 @@ function AvailabilityScheduler() {
               <tbody>
                 {TIME_SLOTS.map(slot => (
                   <tr key={slot} className="border-t">
-                    <td className="p-2 text-sm text-gray-600">{slot}</td>
+                    <td className="p-2 text-sm text-gray-600 font-medium">{slot}</td>
                     {weekDays.map(day => {
-                      const available = isSlotAvailable(day, slot);
-                      const isPast = day < new Date() && !isSameDay(day, new Date());
+                      const available = isSlotAvailable(day.dayOfWeek, slot);
                       return (
-                        <td key={day.toISOString()} className="p-1">
+                        <td key={`${day.dayOfWeek}-${slot}`} className="p-1">
                           <button
-                            onClick={() => !isPast && handleToggle(day, slot)}
-                            disabled={isPast || batchUpdateMutation.isPending}
-                            className={`w-full h-10 md:h-10 min-h-[40px] rounded text-xs font-medium transition-colors active:scale-95 ${
-                              isPast 
-                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                : available 
-                                  ? "bg-green-500 text-white hover:bg-green-600" 
-                                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                            onClick={() => handleToggle(day.dayOfWeek, slot)}
+                            disabled={saveScheduleMutation.isPending}
+                            className={`w-full h-10 md:h-10 min-h-[40px] rounded text-xs font-medium transition-colors active:scale-95 touch-manipulation ${
+                              available 
+                                ? "bg-green-500 text-white hover:bg-green-600" 
+                                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                             }`}
-                            data-testid={`slot-${format(day, "yyyy-MM-dd")}-${slot.replace(/\s/g, "-")}`}
+                            data-testid={`slot-${day.dayOfWeek}-${slot.replace(/\s/g, "-")}`}
                           >
                             {available ? "Available" : "-"}
                           </button>
@@ -693,6 +699,21 @@ function AvailabilityScheduler() {
                 ))}
               </tbody>
             </table>
+            {!hasPendingChanges && (
+              <div className="mt-4 pt-4 border-t">
+                <Button
+                  onClick={handleSubmit}
+                  disabled={saveScheduleMutation.isPending}
+                  className="bg-black text-white hover:bg-gray-800 w-full sm:w-auto min-h-[44px]"
+                >
+                  {saveScheduleMutation.isPending ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
+                  ) : (
+                    "Save Schedule"
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
