@@ -5,13 +5,26 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import session from "express-session";
 import MemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
+import { pool } from "./db";
 import { storage } from "./storage";
 import { sendTechnicianDayOfReminderEmail } from "./email";
 
 const app = express();
 const httpServer = createServer(app);
 
+// Required behind Railway's reverse proxy so cookies/sessions work correctly
+app.set("trust proxy", 1);
+
 const MemoryStoreSession = MemoryStore(session);
+const PgSession = connectPgSimple(session);
+
+// Use PostgreSQL for sessions in production (shared across Railway instances).
+// MemoryStore in dev (in-memory, fine for single local process).
+const sessionStore =
+  process.env.NODE_ENV === "production"
+    ? new (PgSession as any)({ pool, createTableIfMissing: true })
+    : new MemoryStoreSession({ checkPeriod: 86400000 });
 
 declare module "http" {
   interface IncomingMessage {
@@ -35,13 +48,12 @@ app.use(
     secret: process.env.SESSION_SECRET || "theoilboys-session-secret-2026",
     resave: false,
     saveUninitialized: false,
-    store: new MemoryStoreSession({
-      checkPeriod: 86400000,
-    }),
+    store: sessionStore,
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
+      sameSite: "lax",
     },
   })
 );
@@ -141,8 +153,13 @@ async function sendDayOfReminders() {
     }
     
     log(`✅ Reminder email job completed`, "reminder-job");
-  } catch (error) {
-    log(`❌ Error in reminder job: ${error}`, "reminder-job");
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("does not exist") || msg.includes("relation")) {
+      log(`⚠️ Reminder job skipped: database schema may not be initialized yet. Run init-railway-db if needed.`, "reminder-job");
+    } else {
+      log(`❌ Error in reminder job: ${msg}`, "reminder-job");
+    }
   }
 }
 
