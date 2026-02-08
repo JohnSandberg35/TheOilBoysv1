@@ -34,20 +34,6 @@ async function seed() {
   } else {
     console.log("Manager theoilboysllc@gmail.com already exists");
   }
-
-  // Create technician account with email and password
-  const [technician] = await db.insert(mechanics).values({
-    email: "john352@byu.edu",
-    password: hashPassword("technician"),
-    name: "John (Technician)",
-    phone: "801-555-0101"
-  }).onConflictDoNothing().returning();
-  
-  if (technician) {
-    console.log("Created technician:", technician.email);
-  } else {
-    console.log("Technician john352@byu.edu already exists");
-  }
   
   console.log("Seeding complete!");
   process.exit(0);
