@@ -100,7 +100,7 @@ function CustomersTab() {
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ['customers'],
     queryFn: async () => {
-      const response = await fetch('/api/customers');
+      const response = await fetch('/api/customers', { credentials: 'include' });
       if (!response.ok) throw new Error('Failed to fetch customers');
       return response.json();
     },
@@ -110,7 +110,7 @@ function CustomersTab() {
     queryKey: ['customer', selectedCustomer],
     queryFn: async () => {
       if (!selectedCustomer) return null;
-      const response = await fetch(`/api/customers/${selectedCustomer}`);
+      const response = await fetch(`/api/customers/${selectedCustomer}`, { credentials: 'include' });
       if (!response.ok) throw new Error('Failed to fetch customer details');
       return response.json();
     },
@@ -248,7 +248,7 @@ function JobRecordsTab() {
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ['appointments'],
     queryFn: async () => {
-      const response = await fetch('/api/appointments');
+      const response = await fetch('/api/appointments', { credentials: 'include' });
       if (!response.ok) throw new Error('Failed to fetch appointments');
       return response.json();
     },
@@ -263,6 +263,7 @@ function JobRecordsTab() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to update payment');
       return response.json();
@@ -279,6 +280,7 @@ function JobRecordsTab() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes }),
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to update notes');
       return response.json();
@@ -475,7 +477,7 @@ export default function ManagerPage() {
   useEffect(() => {
     const checkSessions = async () => {
       try {
-        const managerRes = await fetch("/api/manager/session");
+        const managerRes = await fetch("/api/manager/session", { credentials: "include" });
         if (managerRes.ok) {
           const manager = await managerRes.json();
           setUser({ ...manager, role: 'manager' });
@@ -484,7 +486,7 @@ export default function ManagerPage() {
       } catch {}
       
       try {
-        const mechanicRes = await fetch("/api/mechanic/session");
+        const mechanicRes = await fetch("/api/mechanic/session", { credentials: "include" });
         if (mechanicRes.ok) {
           const mechanic = await mechanicRes.json();
           setUser({ ...mechanic, role: 'mechanic' });
@@ -500,9 +502,9 @@ export default function ManagerPage() {
 
   const handleLogout = async () => {
     if (user?.role === 'manager') {
-      await fetch("/api/manager/logout", { method: "POST" });
+      await fetch("/api/manager/logout", { method: "POST", credentials: "include" });
     } else {
-      await fetch("/api/mechanic/logout", { method: "POST" });
+      await fetch("/api/mechanic/logout", { method: "POST", credentials: "include" });
     }
     setUser(null);
   };
@@ -541,6 +543,7 @@ function UnifiedLogin({ onLogin }: { onLogin: (user: UserSession) => void }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        credentials: "include",
       });
 
       if (managerRes.ok) {
@@ -554,6 +557,7 @@ function UnifiedLogin({ onLogin }: { onLogin: (user: UserSession) => void }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        credentials: "include",
       });
 
       if (mechanicRes.ok) {
@@ -639,7 +643,7 @@ function ManagerDashboard({ manager, onLogout }: { manager: Manager; onLogout: (
   const { data: appointments = [], isLoading: loadingAppointments } = useQuery<Appointment[]>({
     queryKey: ['appointments'],
     queryFn: async () => {
-      const response = await fetch('/api/appointments');
+      const response = await fetch('/api/appointments', { credentials: 'include' });
       if (!response.ok) throw new Error('Failed to fetch appointments');
       return response.json();
     },
@@ -648,7 +652,7 @@ function ManagerDashboard({ manager, onLogout }: { manager: Manager; onLogout: (
   const { data: mechanics = [], isLoading: loadingMechanics } = useQuery<Mechanic[]>({
     queryKey: ['mechanics'],
     queryFn: async () => {
-      const response = await fetch('/api/mechanics');
+      const response = await fetch('/api/mechanics', { credentials: 'include' });
       if (!response.ok) throw new Error('Failed to fetch mechanics');
       return response.json();
     },
@@ -660,6 +664,7 @@ function ManagerDashboard({ manager, onLogout }: { manager: Manager; onLogout: (
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to update status');
       return response.json();
@@ -794,6 +799,7 @@ function BookingCard({ appointment, mechanics, onUpdateStatus }: { appointment: 
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mechanicId }),
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to assign mechanic');
       return response.json();
@@ -930,7 +936,7 @@ function MechanicCard({ mechanic }: { mechanic: Mechanic }) {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/mechanics/${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/mechanics/${id}`, { method: 'DELETE', credentials: 'include' });
       if (!response.ok) throw new Error('Failed to delete');
     },
     onSuccess: () => {
@@ -953,6 +959,7 @@ function MechanicCard({ mechanic }: { mechanic: Mechanic }) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isPublic }),
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to update');
       return response.json();
@@ -1271,7 +1278,7 @@ function EditTechnicianScheduleDialog({ mechanic }: { mechanic: Mechanic }) {
   const { data: recurringSchedule = [], isLoading } = useQuery({
     queryKey: ["/api/manager/technicians", mechanic.id, "recurring-schedule"],
     queryFn: async () => {
-      const res = await fetch(`/api/manager/technicians/${mechanic.id}/recurring-schedule`);
+      const res = await fetch(`/api/manager/technicians/${mechanic.id}/recurring-schedule`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch schedule");
       return res.json();
     },
@@ -1284,6 +1291,7 @@ function EditTechnicianScheduleDialog({ mechanic }: { mechanic: Mechanic }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ schedules }),
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to save schedule");
       return res.json();
@@ -1417,6 +1425,7 @@ function EditMechanicDialog({ mechanic }: { mechanic: Mechanic }) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to update');
       return response.json();
@@ -1498,7 +1507,7 @@ function EmployeeTimeTracking() {
   const { data: employees = [], isLoading } = useQuery<EmployeeTimeData[]>({
     queryKey: ["/api/manager/employee-time-tracking", format(weekStart, "yyyy-MM-dd")],
     queryFn: async () => {
-      const res = await fetch(`/api/manager/employee-time-tracking?weekStart=${format(weekStart, "yyyy-MM-dd")}`);
+      const res = await fetch(`/api/manager/employee-time-tracking?weekStart=${format(weekStart, "yyyy-MM-dd")}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch employee time data");
       return res.json();
     },
