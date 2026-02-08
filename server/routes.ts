@@ -540,9 +540,14 @@ export async function registerRoutes(
       }
       const mechanic = await storage.createMechanic(validatedData);
       res.status(201).json(sanitizeMechanic(mechanic, true));
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors });
+        const msg = error.errors.map((e) => e.message).join("; ");
+        return res.status(400).json({ error: msg || "Validation failed" });
+      }
+      const msg = error instanceof Error ? error.message : "";
+      if (msg.includes("unique") || msg.includes("duplicate")) {
+        return res.status(400).json({ error: "A technician with this email already exists" });
       }
       res.status(500).json({ error: "Internal server error" });
     }

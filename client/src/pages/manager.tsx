@@ -1137,8 +1137,16 @@ function AddMechanicDialog() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
+        credentials: 'include',
       });
-      if (!response.ok) throw new Error('Failed to create');
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        let msg = 'Failed to add technician';
+        if (typeof err?.error === 'string') msg = err.error;
+        else if (typeof err?.message === 'string') msg = err.message;
+        else if (Array.isArray(err?.error)) msg = err.error.map((e: any) => e?.message).filter(Boolean).join(', ') || msg;
+        throw new Error(msg);
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -1146,6 +1154,13 @@ function AddMechanicDialog() {
       toast({ title: "Technician added successfully" });
       setOpen(false);
       resetForm();
+    },
+    onError: (err: Error) => {
+      toast({
+        title: "Failed to add technician",
+        description: err.message,
+        variant: "destructive",
+      });
     },
   });
 
