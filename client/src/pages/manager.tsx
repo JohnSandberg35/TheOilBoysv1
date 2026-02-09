@@ -26,8 +26,12 @@ import { format, addDays, startOfWeek, isSameDay, parseISO, differenceInHours, d
 
 const MANAGER_TOKEN_KEY = "managerToken";
 function getManagerAuthHeaders(): Record<string, string> {
-  const t = typeof window !== "undefined" ? localStorage.getItem(MANAGER_TOKEN_KEY) : null;
-  return t ? { Authorization: `Bearer ${t}` } : {};
+  try {
+    const t = typeof window !== "undefined" ? localStorage.getItem(MANAGER_TOKEN_KEY) : null;
+    return t ? { Authorization: `Bearer ${t}` } : {};
+  } catch {
+    return {};
+  }
 }
 
 type Availability = {
@@ -481,11 +485,15 @@ export default function ManagerPage() {
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
     const checkSessions = async () => {
       try {
         const managerRes = await fetch("/api/manager/session", {
           credentials: "include",
           headers: getManagerAuthHeaders(),
+          signal: controller.signal,
         });
         if (managerRes.ok) {
           const manager = await managerRes.json();
@@ -495,7 +503,10 @@ export default function ManagerPage() {
       } catch {}
       
       try {
-        const mechanicRes = await fetch("/api/mechanic/session", { credentials: "include" });
+        const mechanicRes = await fetch("/api/mechanic/session", {
+          credentials: "include",
+          signal: controller.signal,
+        });
         if (mechanicRes.ok) {
           const mechanic = await mechanicRes.json();
           setUser({ ...mechanic, role: 'mechanic' });
@@ -506,7 +517,10 @@ export default function ManagerPage() {
       setUser(null);
     };
     
-    checkSessions().finally(() => setCheckingSession(false));
+    checkSessions().finally(() => {
+      clearTimeout(timeout);
+      setCheckingSession(false);
+    });
   }, []);
 
   const handleLogout = async () => {
