@@ -5,8 +5,6 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import session from "express-session";
 import MemoryStore from "memorystore";
-import connectPgSimple from "connect-pg-simple";
-import { pool } from "./db";
 import { storage } from "./storage";
 import { sendTechnicianDayOfReminderEmail } from "./email";
 
@@ -17,14 +15,9 @@ const httpServer = createServer(app);
 app.set("trust proxy", true);
 
 const MemoryStoreSession = MemoryStore(session);
-const PgSession = connectPgSimple(session);
 
-// Use PostgreSQL for sessions in production (shared across Railway instances).
-// MemoryStore in dev (in-memory, fine for single local process).
-const sessionStore =
-  process.env.NODE_ENV === "production"
-    ? new (PgSession as any)({ pool, createTableIfMissing: true })
-    : new MemoryStoreSession({ checkPeriod: 86400000 });
+// MemoryStore - Bearer token auth handles managers; sessions used for mechanics only
+const sessionStore = new MemoryStoreSession({ checkPeriod: 86400000 });
 
 declare module "http" {
   interface IncomingMessage {
@@ -49,12 +42,12 @@ app.use(
     resave: false,
     saveUninitialized: false,
     store: sessionStore,
-    cookie: (req) => ({
-      secure: req.secure ?? (process.env.NODE_ENV === "production"),
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
-      sameSite: "lax" as const,
-    }),
+      sameSite: "lax",
+    },
   })
 );
 
