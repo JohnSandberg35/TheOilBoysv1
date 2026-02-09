@@ -69,10 +69,7 @@ function parseManagerToken(req: Request, _res: Response, next: NextFunction) {
 
 function requireManagerAuth(req: Request, res: Response, next: NextFunction) {
   const fromToken = (req as any).managerFromToken;
-  if (fromToken) {
-    (req as any).session = { ...(req.session || {}), managerId: fromToken.managerId, managerEmail: fromToken.email, managerName: fromToken.name };
-    return next();
-  }
+  if (fromToken) return next(); // Token valid, don't touch req.session
   if (req.session?.managerId) return next();
   return res.status(401).json({ error: "Unauthorized" });
 }
