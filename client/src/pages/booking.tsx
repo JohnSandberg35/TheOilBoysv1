@@ -31,7 +31,7 @@ const formSchema = z.object({
   vehicleMake: z.string().min(2, "Make is required"),
   vehicleModel: z.string().min(2, "Model is required"),
   vehicleType: z.enum(["sedan-compact", "suv-truck"], { required_error: "Please select vehicle type" }),
-  isHighMileage: z.boolean(),
+  isHighMileage: z.boolean().optional().refine((v) => v !== undefined, { message: "Please select mileage" }),
   preferredContactMethod: z.enum(["phone-text", "phone-call", "email"], { required_error: "Please select preferred contact method" }),
   date: z.date({ required_error: "Please select a date" }),
   timeSlot: z.string().min(1, "Please select a time"),
@@ -98,7 +98,7 @@ export default function Booking() {
       vehicleMake: "",
       vehicleModel: "",
       vehicleType: undefined,
-      isHighMileage: false,
+      isHighMileage: undefined,
       preferredContactMethod: undefined,
       timeSlot: "",
       mechanicId: undefined,
@@ -170,7 +170,7 @@ export default function Booking() {
 
   const nextStep = async () => {
     let fieldsToValidate: any[] = [];
-    if (step === 1) fieldsToValidate = ['licensePlate', 'vehicleYear', 'vehicleMake', 'vehicleModel', 'vehicleType'];
+    if (step === 1) fieldsToValidate = ['licensePlate', 'vehicleYear', 'vehicleMake', 'vehicleModel', 'vehicleType', 'isHighMileage'];
     if (step === 2) fieldsToValidate = ['date', 'timeSlot', 'streetAddress', 'city', 'state', 'zipCode'];
     if (step === 3) fieldsToValidate = ['name', 'email', 'phone', 'preferredContactMethod'];
     
@@ -629,7 +629,7 @@ export default function Booking() {
                         Summary
                       </h4>
                       <p><span className="font-semibold">Vehicle:</span> {form.getValues('vehicleYear')} {form.getValues('vehicleMake')} {form.getValues('vehicleModel')}</p>
-                      <p><span className="font-semibold">Service:</span> {getServiceDescription(form.getValues('isHighMileage'))}</p>
+                      <p><span className="font-semibold">Service:</span> {getServiceDescription(form.getValues('isHighMileage') ?? false)}</p>
                       <p><span className="font-semibold">When:</span> {form.getValues('date') ? format(form.getValues('date'), 'PPP') : ''} at {form.getValues('timeSlot')}</p>
                       <p><span className="font-semibold">Where:</span> {form.getValues('streetAddress')}, {form.getValues('city')}, {form.getValues('state')} {form.getValues('zipCode')}</p>
                       <div className="border-t pt-2 mt-2">
@@ -648,7 +648,7 @@ export default function Booking() {
                         Appointment Summary
                       </h4>
                       <p><span className="font-semibold">Vehicle:</span> {form.getValues('vehicleYear')} {form.getValues('vehicleMake')} {form.getValues('vehicleModel')}</p>
-                      <p><span className="font-semibold">Service:</span> {getServiceDescription(form.getValues('isHighMileage'))}</p>
+                      <p><span className="font-semibold">Service:</span> {getServiceDescription(form.getValues('isHighMileage') ?? false)}</p>
                       <p><span className="font-semibold">When:</span> {form.getValues('date') ? format(form.getValues('date'), 'PPP') : ''} at {form.getValues('timeSlot')}</p>
                       <p><span className="font-semibold">Where:</span> {form.getValues('streetAddress')}, {form.getValues('city')}, {form.getValues('state')} {form.getValues('zipCode')}</p>
                       <div className="border-t pt-2 mt-2">
@@ -668,7 +668,7 @@ export default function Booking() {
                         vehicleMake: form.getValues('vehicleMake'),
                         vehicleModel: form.getValues('vehicleModel'),
                         vehicleType: form.getValues('vehicleType'),
-                        serviceType: getServiceDescription(form.getValues('isHighMileage')),
+                        serviceType: getServiceDescription(form.getValues('isHighMileage') ?? false),
                         price: getPrice(form.getValues('vehicleType')),
                         date: form.getValues('date') ? format(form.getValues('date'), 'yyyy-MM-dd') : '',
                         timeSlot: form.getValues('timeSlot'),
