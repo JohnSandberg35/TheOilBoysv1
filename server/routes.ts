@@ -101,6 +101,11 @@ export async function registerRoutes(
       req.session.managerId = manager.id;
       req.session.managerEmail = manager.email;
       req.session.managerName = manager.name;
+
+      // Force session save before sending response (helps with some session stores)
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => (err ? reject(err) : resolve()));
+      });
       
       res.json({ 
         id: manager.id, 

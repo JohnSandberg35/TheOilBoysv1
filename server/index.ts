@@ -13,8 +13,8 @@ import { sendTechnicianDayOfReminderEmail } from "./email";
 const app = express();
 const httpServer = createServer(app);
 
-// Required behind Railway's reverse proxy so cookies/sessions work correctly
-app.set("trust proxy", 1);
+// Required behind Railway's reverse proxy (and Cloudflare if used)
+app.set("trust proxy", true);
 
 const MemoryStoreSession = MemoryStore(session);
 const PgSession = connectPgSimple(session);
@@ -49,12 +49,12 @@ app.use(
     resave: false,
     saveUninitialized: false,
     store: sessionStore,
-    cookie: {
-      secure: process.env.NODE_ENV === "production",
+    cookie: (req) => ({
+      secure: req.secure ?? (process.env.NODE_ENV === "production"),
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
-      sameSite: "lax",
-    },
+      sameSite: "lax" as const,
+    }),
   })
 );
 
