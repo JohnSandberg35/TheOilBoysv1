@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Truck, Car, Shield, User, Wrench } from "lucide-react";
@@ -159,16 +159,19 @@ function StepCard({ number, icon: Icon, title, description }: { number: string, 
 }
 
 function MechanicCard({ mechanic }: { mechanic: Mechanic }) {
+  const [imgError, setImgError] = useState(false);
+  const photoSrc = mechanic.photoUrl && !imgError ? mechanic.photoUrl : logoImage;
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-6">
         <div className="flex flex-col items-center text-center">
           <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center overflow-hidden mb-4">
-            {mechanic.photoUrl ? (
-              <img src={mechanic.photoUrl} alt={mechanic.name} className="w-full h-full object-cover" />
-            ) : (
-              <User className="w-12 h-12 text-muted-foreground" />
-            )}
+            <img
+              src={photoSrc}
+              alt={mechanic.name}
+              className="w-full h-full object-cover"
+              onError={() => setImgError(true)}
+            />
           </div>
           <div className="flex items-center gap-2 mb-2">
             <h3 className="text-xl font-bold">{mechanic.name}</h3>

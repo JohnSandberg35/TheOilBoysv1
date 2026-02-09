@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, addDays, startOfWeek, isSameDay, parseISO, differenceInHours, differenceInMinutes } from "date-fns";
+import logoImage from "@/assets/logo.png";
 
 const MANAGER_TOKEN_KEY = "managerToken";
 function getManagerAuthHeaders(): Record<string, string> {
@@ -995,16 +996,19 @@ function MechanicCard({ mechanic }: { mechanic: Mechanic }) {
     },
   });
 
+  const [imgError, setImgError] = useState(false);
+  const photoSrc = mechanic.photoUrl && !imgError ? mechanic.photoUrl : logoImage;
   return (
     <Card>
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center overflow-hidden">
-            {mechanic.photoUrl ? (
-              <img src={mechanic.photoUrl} alt={mechanic.name} className="w-full h-full object-cover" />
-            ) : (
-              <User className="w-8 h-8 text-muted-foreground" />
-            )}
+            <img
+              src={photoSrc}
+              alt={mechanic.name}
+              className="w-full h-full object-cover"
+              onError={() => setImgError(true)}
+            />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
