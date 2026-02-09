@@ -8,6 +8,7 @@ import { insertAppointmentSchema, insertMechanicSchema, insertMechanicAvailabili
 import { z } from "zod";
 import { sendBookingConfirmation } from "./email";
 import { createPaymentIntent, confirmPaymentIntent } from "./stripe";
+import { createManagerToken, verifyManagerToken } from "./managerAuth";
 import crypto from "crypto";
 
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
@@ -56,11 +57,24 @@ function sanitizeMechanics<T extends { password?: string | null; email?: string 
   return mechanics.map(m => sanitizeMechanic(m, includeEmail));
 }
 
-function requireManagerAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req.session?.managerId) {
-    return res.status(401).json({ error: "Unauthorized" });
+// Populate req.managerFromToken when Bearer token is valid (before requireManagerAuth)
+function parseManagerToken(req: Request, _res: Response, next: NextFunction) {
+  const auth = req.headers.authorization;
+  if (auth?.startsWith("Bearer ")) {
+    const payload = verifyManagerToken(auth.slice(7));
+    if (payload) (req as any).managerFromToken = payload;
   }
   next();
+}
+
+function requireManagerAuth(req: Request, res: Response, next: NextFunction) {
+  const fromToken = (req as any).managerFromToken;
+  if (fromToken) {
+    (req as any).session = { ...(req.session || {}), managerId: fromToken.managerId, managerEmail: fromToken.email, managerName: fromToken.name };
+    return next();
+  }
+  if (req.session?.managerId) return next();
+  return res.status(401).json({ error: "Unauthorized" });
 }
 
 function requireMechanicAuth(req: Request, res: Response, next: NextFunction) {
@@ -85,6 +99,7 @@ export async function registerRoutes(
 ): Promise<Server> {
 
   app.use("/uploads", express.static(UPLOADS_DIR));
+  app.use(parseManagerToken);
 
   // Manager login
   app.post("/api/manager/login", async (req, res) => {
@@ -102,15 +117,19 @@ export async function registerRoutes(
       req.session.managerEmail = manager.email;
       req.session.managerName = manager.name;
 
-      // Force session save before sending response (helps with some session stores)
+      // Force session save (helps with some session stores)
       await new Promise<void>((resolve, reject) => {
         req.session.save((err) => (err ? reject(err) : resolve()));
       });
+
+      // Bearer token - works when cookies fail (Railway, custom domains)
+      const token = createManagerToken(manager.id, manager.email, manager.name);
       
       res.json({ 
         id: manager.id, 
         email: manager.email, 
-        name: manager.name 
+        name: manager.name,
+        token,
       });
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
@@ -144,15 +163,18 @@ export async function registerRoutes(
   });
 
   app.get("/api/manager/session", (req, res) => {
+    const fromToken = (req as any).managerFromToken;
+    if (fromToken) {
+      return res.json({ id: fromToken.managerId, email: fromToken.email, name: fromToken.name });
+    }
     if (req.session?.managerId) {
-      res.json({
+      return res.json({
         id: req.session.managerId,
         email: req.session.managerEmail,
         name: req.session.managerName,
       });
-    } else {
-      res.status(401).json({ error: "Not authenticated" });
     }
+    res.status(401).json({ error: "Not authenticated" });
   });
 
   // Mechanic login

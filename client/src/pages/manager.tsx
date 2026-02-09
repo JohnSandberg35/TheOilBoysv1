@@ -24,6 +24,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, addDays, startOfWeek, isSameDay, parseISO, differenceInHours, differenceInMinutes } from "date-fns";
 
+const MANAGER_TOKEN_KEY = "managerToken";
+function getManagerAuthHeaders(): Record<string, string> {
+  const t = typeof window !== "undefined" ? localStorage.getItem(MANAGER_TOKEN_KEY) : null;
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
+
 type Availability = {
   id: string;
   mechanicId: string;
@@ -100,7 +106,7 @@ function CustomersTab() {
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ['customers'],
     queryFn: async () => {
-      const response = await fetch('/api/customers', { credentials: 'include' });
+      const response = await fetch('/api/customers', { credentials: 'include', headers: getManagerAuthHeaders() });
       if (!response.ok) throw new Error('Failed to fetch customers');
       return response.json();
     },
@@ -110,7 +116,7 @@ function CustomersTab() {
     queryKey: ['customer', selectedCustomer],
     queryFn: async () => {
       if (!selectedCustomer) return null;
-      const response = await fetch(`/api/customers/${selectedCustomer}`, { credentials: 'include' });
+      const response = await fetch(`/api/customers/${selectedCustomer}`, { credentials: 'include', headers: getManagerAuthHeaders() });
       if (!response.ok) throw new Error('Failed to fetch customer details');
       return response.json();
     },
@@ -248,7 +254,7 @@ function JobRecordsTab() {
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ['appointments'],
     queryFn: async () => {
-      const response = await fetch('/api/appointments', { credentials: 'include' });
+      const response = await fetch('/api/appointments', { credentials: 'include', headers: getManagerAuthHeaders() });
       if (!response.ok) throw new Error('Failed to fetch appointments');
       return response.json();
     },
@@ -261,7 +267,7 @@ function JobRecordsTab() {
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
       const response = await fetch(`/api/appointments/${id}/payment`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getManagerAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
         credentials: 'include',
       });
@@ -278,7 +284,7 @@ function JobRecordsTab() {
     mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
       const response = await fetch(`/api/appointments/${id}/notes`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getManagerAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes }),
         credentials: 'include',
       });
@@ -477,7 +483,10 @@ export default function ManagerPage() {
   useEffect(() => {
     const checkSessions = async () => {
       try {
-        const managerRes = await fetch("/api/manager/session", { credentials: "include" });
+        const managerRes = await fetch("/api/manager/session", {
+          credentials: "include",
+          headers: getManagerAuthHeaders(),
+        });
         if (managerRes.ok) {
           const manager = await managerRes.json();
           setUser({ ...manager, role: 'manager' });
@@ -502,7 +511,8 @@ export default function ManagerPage() {
 
   const handleLogout = async () => {
     if (user?.role === 'manager') {
-      await fetch("/api/manager/logout", { method: "POST", credentials: "include" });
+      await fetch("/api/manager/logout", { method: "POST", credentials: "include", headers: getManagerAuthHeaders() });
+      localStorage.removeItem(MANAGER_TOKEN_KEY);
     } else {
       await fetch("/api/mechanic/logout", { method: "POST", credentials: "include" });
     }
@@ -548,6 +558,7 @@ function UnifiedLogin({ onLogin }: { onLogin: (user: UserSession) => void }) {
 
       if (managerRes.ok) {
         const manager = await managerRes.json();
+        if (manager.token) localStorage.setItem(MANAGER_TOKEN_KEY, manager.token);
         onLogin({ ...manager, role: 'manager' });
         toast({ title: `Welcome back, ${manager.name}!` });
         return;
@@ -643,7 +654,7 @@ function ManagerDashboard({ manager, onLogout }: { manager: Manager; onLogout: (
   const { data: appointments = [], isLoading: loadingAppointments } = useQuery<Appointment[]>({
     queryKey: ['appointments'],
     queryFn: async () => {
-      const response = await fetch('/api/appointments', { credentials: 'include' });
+      const response = await fetch('/api/appointments', { credentials: 'include', headers: getManagerAuthHeaders() });
       if (!response.ok) throw new Error('Failed to fetch appointments');
       return response.json();
     },
@@ -652,7 +663,7 @@ function ManagerDashboard({ manager, onLogout }: { manager: Manager; onLogout: (
   const { data: mechanics = [], isLoading: loadingMechanics } = useQuery<Mechanic[]>({
     queryKey: ['mechanics'],
     queryFn: async () => {
-      const response = await fetch('/api/mechanics', { credentials: 'include' });
+      const response = await fetch('/api/mechanics', { credentials: 'include', headers: getManagerAuthHeaders() });
       if (!response.ok) throw new Error('Failed to fetch mechanics');
       return response.json();
     },
@@ -662,7 +673,7 @@ function ManagerDashboard({ manager, onLogout }: { manager: Manager; onLogout: (
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const response = await fetch(`/api/appointments/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getManagerAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
         credentials: 'include',
       });
@@ -797,7 +808,7 @@ function BookingCard({ appointment, mechanics, onUpdateStatus }: { appointment: 
     mutationFn: async (mechanicId: string) => {
       const response = await fetch(`/api/appointments/${appointment.id}/assign`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getManagerAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ mechanicId }),
         credentials: 'include',
       });
@@ -936,7 +947,7 @@ function MechanicCard({ mechanic }: { mechanic: Mechanic }) {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/mechanics/${id}`, { method: 'DELETE', credentials: 'include' });
+      const response = await fetch(`/api/mechanics/${id}`, { method: 'DELETE', credentials: 'include', headers: getManagerAuthHeaders() });
       if (!response.ok) throw new Error('Failed to delete');
     },
     onSuccess: () => {
@@ -957,7 +968,7 @@ function MechanicCard({ mechanic }: { mechanic: Mechanic }) {
     mutationFn: async ({ id, isPublic }: { id: string; isPublic: boolean }) => {
       const response = await fetch(`/api/mechanics/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getManagerAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ isPublic }),
         credentials: 'include',
       });
@@ -1069,6 +1080,7 @@ function TechnicianPhotoField({
         method: "POST",
         body: formData,
         credentials: "include",
+        headers: getManagerAuthHeaders(),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -1142,7 +1154,7 @@ function AddMechanicDialog() {
     mutationFn: async (data: any) => {
       const response = await fetch('/api/mechanics', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getManagerAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
         credentials: 'include',
       });
@@ -1278,7 +1290,7 @@ function EditTechnicianScheduleDialog({ mechanic }: { mechanic: Mechanic }) {
   const { data: recurringSchedule = [], isLoading } = useQuery({
     queryKey: ["/api/manager/technicians", mechanic.id, "recurring-schedule"],
     queryFn: async () => {
-      const res = await fetch(`/api/manager/technicians/${mechanic.id}/recurring-schedule`, { credentials: "include" });
+      const res = await fetch(`/api/manager/technicians/${mechanic.id}/recurring-schedule`, { credentials: "include", headers: getManagerAuthHeaders() });
       if (!res.ok) throw new Error("Failed to fetch schedule");
       return res.json();
     },
@@ -1289,7 +1301,7 @@ function EditTechnicianScheduleDialog({ mechanic }: { mechanic: Mechanic }) {
     mutationFn: async (schedules: Array<{ dayOfWeek: number; timeSlot: string; isAvailable: boolean }>) => {
       const res = await fetch(`/api/manager/technicians/${mechanic.id}/recurring-schedule`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...getManagerAuthHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ schedules }),
         credentials: "include",
       });
@@ -1423,7 +1435,7 @@ function EditMechanicDialog({ mechanic }: { mechanic: Mechanic }) {
     mutationFn: async (data: any) => {
       const response = await fetch(`/api/mechanics/${mechanic.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getManagerAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
         credentials: 'include',
       });
@@ -1507,7 +1519,7 @@ function EmployeeTimeTracking() {
   const { data: employees = [], isLoading } = useQuery<EmployeeTimeData[]>({
     queryKey: ["/api/manager/employee-time-tracking", format(weekStart, "yyyy-MM-dd")],
     queryFn: async () => {
-      const res = await fetch(`/api/manager/employee-time-tracking?weekStart=${format(weekStart, "yyyy-MM-dd")}`, { credentials: "include" });
+      const res = await fetch(`/api/manager/employee-time-tracking?weekStart=${format(weekStart, "yyyy-MM-dd")}`, { credentials: "include", headers: getManagerAuthHeaders() });
       if (!res.ok) throw new Error("Failed to fetch employee time data");
       return res.json();
     },

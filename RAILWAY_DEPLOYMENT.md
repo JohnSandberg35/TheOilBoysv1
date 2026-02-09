@@ -7,47 +7,66 @@ This guide walks you through deploying the app to Railway (free tier to start).
 - [Railway account](https://railway.app) (sign up with GitHub)
 - Your code in a GitHub repository (push your project to GitHub first)
 
-## Step 1: Create a New Project on Railway
+> ⚠️ **Critical:** The app **crashes immediately** if `DATABASE_URL` and other env vars are missing. You must add the database and variables **before** the first deploy finishes, or the app will never start. Follow the steps in order.
+
+## Step 1: Create Project and Add Database First
 
 1. Go to [railway.app](https://railway.app) and sign in with GitHub
 2. Click **New Project**
 3. Select **Deploy from GitHub repo**
 4. Choose your repository (or connect GitHub and select the Oil Boys repo)
-5. Railway will detect it as a Node.js project
+5. Railway creates the project and starts building — **don’t wait for it to finish**
 
-## Step 2: Add a PostgreSQL Database
+**Immediately add PostgreSQL (before the build completes):**
 
-1. In your Railway project dashboard, click **+ New**
-2. Select **Database** → **Add PostgreSQL**
-3. Railway creates a PostgreSQL instance and provides a connection URL
-4. Click on the PostgreSQL service → **Variables** tab
-5. Copy the `DATABASE_URL` value (you'll need it for the app)
+6. In your Railway project, click **+ New**
+7. Select **Database** → **Add PostgreSQL**
+8. Railway creates a PostgreSQL instance (this only takes a few seconds)
 
-## Step 3: Configure Your Web Service
-
-The project includes a `railway.toml` that sets the build and start commands automatically. You typically don't need to change anything.
+## Step 2: Add Environment Variables (Before First Deploy)
 
 1. Click on your **web service** (the one from your GitHub repo)
-2. Under **Networking**, click **Generate Domain** to get a public URL (e.g. `yourapp.up.railway.app`)
+2. Go to the **Variables** tab
+3. For each variable, click **+ New Variable** (or **Add Variable**). You'll get two fields:
+   - **Variable** (or "Name") — type the variable name exactly
+   - **Value** — type the value, or use a reference
 
-## Step 4: Add Environment Variables
+Add these one by one. For each row: **Name** = what you type in the variable name field, **Value** = what you type (or paste) in the value field:
 
-In your web service, go to **Variables** and add:
+- **DATABASE_URL**
+  - Name: `DATABASE_URL`
+  - Value: Use the reference option (the **REF** or **Add Reference** button). Choose your Postgres service, then `DATABASE_URL`. It fills in something like `${{Postgres.DATABASE_URL}}`.  
+  - If there's no reference button: type `${{Postgres.DATABASE_URL}}` — use your Postgres service's actual name from the left sidebar (often `Postgres` or `PostgreSQL`).
 
-| Variable | Value | Notes |
-|----------|-------|-------|
-| `DATABASE_URL` | *(from PostgreSQL service)* | Use the `DATABASE_URL` from your Railway PostgreSQL. You can reference it: `${{Postgres.DATABASE_URL}}` if you named the DB "Postgres" |
-| `NODE_ENV` | `production` | Required |
-| `SESSION_SECRET` | *(generate a random string)* | Use a long random string, e.g. from [randomkeygen.com](https://randomkeygen.com) |
-| `RESEND_API_KEY` | `re_xxxx...` | Your Resend API key for emails |
-| `STRIPE_SECRET_KEY` | `sk_test_...` or `sk_live_...` | Use test key first, switch to live when ready |
-| `VITE_STRIPE_PUBLISHABLE_KEY` | `pk_test_...` or `pk_live_...` | Must be set at build time for Stripe to work |
+- **NODE_ENV**
+  - Name: `NODE_ENV`  
+  - Value: `production`
 
-**Referencing the database URL:** In Railway, you can link services. If your PostgreSQL is named "Postgres", add a variable:
-- Name: `DATABASE_URL`
-- Value: Click **Add Reference** → select your Postgres service → choose `DATABASE_URL`
+- **SESSION_SECRET**
+  - Name: `SESSION_SECRET`  
+  - Value: A long random string from [randomkeygen.com](https://randomkeygen.com), e.g. `a8f5f167f44f4964e6c998dee827110c`
 
-## Step 5: Push Your Code to GitHub
+- **RESEND_API_KEY**
+  - Name: `RESEND_API_KEY`  
+  - Value: Your Resend API key (starts with `re_`)
+
+- **STRIPE_SECRET_KEY**
+  - Name: `STRIPE_SECRET_KEY`  
+  - Value: Your Stripe secret key (`sk_test_...` for test mode)
+
+- **VITE_STRIPE_PUBLISHABLE_KEY**
+  - Name: `VITE_STRIPE_PUBLISHABLE_KEY`  
+  - Value: Your Stripe publishable key (`pk_test_...` for test mode). **Required before build.**
+
+## Step 3: Configure Networking
+
+1. Stay in your **web service**
+2. Go to **Settings** → **Networking** (or the **Variables** tab → **Networking**)
+3. Click **Generate Domain** to get a public URL (e.g. `yourapp.up.railway.app`)
+
+The project includes a `railway.toml` that sets the build and start commands automatically.
+
+## Step 4: Push Your Code to GitHub (if needed)
 
 If you haven't already:
 
@@ -63,7 +82,7 @@ git push -u origin main
 
 Railway will auto-deploy when you push.
 
-## Step 6: Initialize the Database
+## Step 5: Initialize the Database
 
 After the first deploy, you need to set up the database schema and seed data:
 
@@ -76,21 +95,30 @@ After the first deploy, you need to set up the database schema and seed data:
 npm install -g @railway/cli
 railway login
 railway link
-railway run npm run db:push
+railway run npm run db:push   # May fail on some DBs; use db:init if so
 railway run npm run db:sync-schema
 railway run npm run db:add-stripe-fields
 railway run npm run db:seed
 railway run npm run db:reset-production
 ```
 
-**Option B: Run migrations locally against production**
+**If `db:push` fails or you see "relation appointments does not exist":** The database may be empty. Run `db:init` first (from your project folder, with production `DATABASE_URL` in `.env`):
+```bash
+npm run db:init
+npm run db:sync-schema
+npm run db:add-stripe-fields
+npm run db:seed
+npm run db:reset-production
+```
 
-1. In Railway, copy your PostgreSQL `DATABASE_URL`
+**Option B: Run migrations locally against production** (use the **public** `DATABASE_URL` from Railway — the private `postgres.railway.internal` host only works from inside Railway)
+
+1. In Railway, copy your PostgreSQL **public** `DATABASE_URL` (from Variables or Connect tab)
 2. Locally, temporarily add it to `.env`: `DATABASE_URL=postgresql://...`
-3. Run: `npm run db:push`, `npm run db:sync-schema`, `npm run db:add-stripe-fields`, `npm run db:seed`, `npm run db:reset-production`
+3. From your project folder, run: `npm run db:init` (creates tables if empty), then `npm run db:sync-schema`, `npm run db:add-stripe-fields`, `npm run db:seed`, `npm run db:reset-production`
 4. Remove the production DATABASE_URL from your local `.env`
 
-## Step 7: Test Your Deployment
+## Step 6: Test Your Deployment
 
 1. Visit your Railway URL (e.g. `https://yourapp.up.railway.app`)
 2. Test the booking flow
@@ -120,10 +148,10 @@ To use your own domain (e.g. theoilboys.org):
 
 ## Troubleshooting
 
-**Build fails:** Check the build logs. Ensure `VITE_STRIPE_PUBLISHABLE_KEY` is set (required at build time).
+**App crashes immediately / "Application failed to respond":** The app requires `DATABASE_URL` to start. Add the PostgreSQL database, add `DATABASE_URL` as a variable reference to your Postgres service, then trigger a **Redeploy** (web service → **Deployments** → ⋮ menu → **Redeploy**).
+
+**Build fails:** Check the build logs. Ensure `VITE_STRIPE_PUBLISHABLE_KEY` is set (required at build time). Add it in Variables, then redeploy.
 
 **Database connection fails:** Verify `DATABASE_URL` is set and uses `?sslmode=require` if Railway Postgres requires SSL.
-
-**App crashes on start:** Check logs for missing env vars. All variables in the table above must be set.
 
 **Port errors:** Railway sets `PORT` automatically; the app reads it. No changes needed.
