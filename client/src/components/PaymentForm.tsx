@@ -242,8 +242,7 @@ export function PaymentForm(props: PaymentFormProps) {
       <Card>
         <CardContent className="p-6">
           <p className="text-destructive">
-            Stripe is not configured. Please set VITE_STRIPE_PUBLISHABLE_KEY in
-            your environment variables.
+            Stripe is not configured. Set VITE_STRIPE_PUBLISHABLE_KEY in your environment.
           </p>
         </CardContent>
       </Card>

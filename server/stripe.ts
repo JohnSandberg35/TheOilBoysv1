@@ -1,13 +1,13 @@
 import Stripe from "stripe";
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  console.warn("⚠️ STRIPE_SECRET_KEY not set - payment functionality will be disabled");
+const secretKey = process.env.STRIPE_SECRET_KEY;
+
+if (!secretKey) {
+  console.warn("⚠️ Stripe secret key not set - payment functionality will be disabled");
 }
 
-export const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: "2024-11-20.acacia",
-    })
+export const stripe = secretKey
+  ? new Stripe(secretKey, { apiVersion: "2024-11-20.acacia" })
   : null;
 
 export interface CreatePaymentIntentParams {

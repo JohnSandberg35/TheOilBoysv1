@@ -73,9 +73,11 @@ export default function Home() {
             </h2>
             <div className="w-24 h-1 bg-primary mx-auto mb-12"></div>
             
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="flex flex-wrap justify-center gap-8 max-w-5xl mx-auto">
               {mechanics.map(mechanic => (
-                <MechanicCard key={mechanic.id} mechanic={mechanic} />
+                <div key={mechanic.id} className="w-full max-w-[20rem] sm:w-72 flex-shrink-0">
+                  <MechanicCard mechanic={mechanic} />
+                </div>
               ))}
             </div>
           </div>

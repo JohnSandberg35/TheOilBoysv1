@@ -136,11 +136,32 @@ The app uses in-memory sessions (`MemoryStore`). For production with multiple in
 ### Stripe in Production
 When going live, switch to your Stripe **live** keys and update the env vars. Ensure your Stripe webhook/domain is configured for production.
 
-### Custom Domain
-To use your own domain (e.g. theoilboys.org):
-1. In Railway → your service → **Settings** → **Networking** → **Custom Domain**
-2. Add your domain and follow the DNS instructions
-3. Update any Stripe/Resend settings that reference your domain
+### Custom Domain (theoilboysllc.com)
+
+To serve the app at **theoilboysllc.com** (and optionally **www.theoilboysllc.com**):
+
+1. **Add the domain in Railway**
+   - Open your Railway project → click your **web service**
+   - Go to **Settings** → **Networking** (or **Networking** in the service)
+   - Under **Custom Domains**, click **Add custom domain** (or **Generate Domain** first if you don’t have a public URL yet)
+   - Enter `theoilboysllc.com` and add it
+   - Add `www.theoilboysllc.com` as well if you want www to work
+   - Railway will show the exact **CNAME target** (e.g. `yourapp.up.railway.app`) and, for the root domain, either an **A record** IP or instructions (some setups use CNAME flattening)
+
+2. **Point DNS at Railway**
+   - Log in where **theoilboysllc.com** DNS is managed (registrar, e.g. GoDaddy/Namecheap, or Cloudflare if you use it).
+   - **For the root domain (theoilboysllc.com):**
+     - If Railway gives you **IP addresses:** create an **A** record: name `@`, value = that IP (or multiple A records if Railway gives more than one).
+     - If Railway only gives a hostname: use an **ALIAS** or **ANAME** record to that hostname if your DNS provider supports it; otherwise follow Railway’s exact instructions.
+   - **For www:** create a **CNAME** record: name `www`, value = the Railway hostname Railway showed you (e.g. `yourapp.up.railway.app`).
+   - Save and wait for DNS to propagate (a few minutes up to 48 hours).
+
+3. **SSL**
+   - Railway provisions HTTPS for your custom domain automatically once DNS is correct. No extra step needed.
+
+4. **After it’s working**
+   - In Stripe (if you use redirects or allowed domains), add `https://theoilboysllc.com`.
+   - In Resend, update any domain/sender settings if you send email from this domain.
 
 ### Free Tier Limits
 - **$1/month credit** — may run out; monitor usage in Railway dashboard
